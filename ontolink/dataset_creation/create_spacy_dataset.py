@@ -1,24 +1,24 @@
 # %%
-# %load_ext autoreload
-# %autoreload 2
-# from re import T
-# import sys
+%load_ext autoreload
+%autoreload 2
+from re import T
+import sys
 
-# sys.path.append("..")
-# import os
-# import sys
+sys.path.append("..")
+import os
+import sys
 
 # %%
 import config
 import networkx as nx
 from pathlib import Path
 import obonet
-import jsonlines
-from utils import get_parents_ids, get_synonyms_formatted
+from utils import get_children_ids, get_synonyms_formatted
 import os
 import copy
 import random
 #%%
+MAX_NUM_WORDS_ENTITY = 2 
 ONTO_PATH = config.ONTOLOGY_FILES_PATH
 ONTOLOGIES=['go'] 
 SAVING_DIR =os.path.join('data','blink') 
@@ -36,25 +36,26 @@ for ontology in ONTOLOGIES:
     graph = obonet.read_obo(obo_file)
     for id, data in graph.nodes(data=True):
         
-        try:
-            name = data['name']
-        except KeyError:
+        if 'name' in data:
+            name = data['name'].lower()
+        else:
             continue
 
-        try:
-            definition = data['def']
-        except KeyError:
-            definition = ''
+        # if 'def' in data:
+        #     definition = data['def']
+        # else:
+        #     definition = ''
 
-        try:
-            synonyms = ' '.join(get_synonyms_formatted(graph, data))
-        except KeyError:
-            synonyms = ''
-        label_id = id
-        label_title = name
-        context = definition.replace('"','') 
+        # try:
+        #     synonyms = ' '.join(get_synonyms_formatted(graph, data))
+        # except KeyError:
+        #     synonyms = ''
+        words_name = name.split('')
+        if len(words_name)> MAX_NUM_WORDS_ENTITY:
+            continue:
+
         #find parents
-        parents = get_parents_ids(id,graph)
+        parents = get_children_ids(id,graph)
         if len(parents) < 1:
             continue
         # print(name)
@@ -100,3 +101,18 @@ for i,jfile in enumerate(json_files):
     writer.close()
 
 print("Finished saving to file")
+
+
+#%%
+ontology='go'
+obo_file = os.path.join(ONTO_PATH,ontology,ontology+".obo")
+print('Processing:  ', obo_file)
+graph = obonet.read_obo(obo_file)
+
+# %%
+children = get_children_ids('GO:0016049',graph)
+# %%
+id = 'GO:0016049'
+for child, parent, key in graph.in_edges(id, keys=True):
+    print(f'• {parent} ⟵ {key} ⟵ {child}')
+# %%
