@@ -30,11 +30,11 @@ def get_parents_ids(id,graph):
     else:
         return (parents + get_parents_ids(parents[0],graph))
 
-def get_children_ids(id,graph,deep=0):
-    """Returns a list with the ids of the parents of the node
+def get_children_ids(id,graph,deep=0,max_deep=3):
+    """Returns a list with the ids of the children of the node
     with `id`
     """
-    if deep>3:
+    if deep>max_deep:
         return []
 
     children=[]
@@ -55,3 +55,8 @@ def get_children_ids(id,graph,deep=0):
 #https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-a-list-of-lists
 def flatten(a):
     return list(itertools.chain.from_iterable(a))
+
+def preprocess(str):
+    """Common preprocess the strings found in the ontologies
+    """
+    return str.lower().strip()

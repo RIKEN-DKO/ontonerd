@@ -1,32 +1,34 @@
 # %%
-%load_ext autoreload
-%autoreload 2
-from re import T
-import sys
+# debug
+# %load_ext autoreload
+# %autoreload 2
+# from re import T
+# import sys
 
-sys.path.append("..")
-import os
-import sys
+# sys.path.append("..")
+# import os
+# import sys
 
 # %%
 import config
 import networkx as nx
 from pathlib import Path
 import obonet
-from utils import get_children_ids, get_synonyms_formatted
+from utils import get_children_ids, get_synonyms_formatted,preprocess
 import os
 import copy
 import random
+import pickle
 #%%
 MAX_NUM_WORDS_ENTITY = 2 
 ONTO_PATH = config.ONTOLOGY_FILES_PATH
 ONTOLOGIES=['go'] 
-SAVING_DIR =os.path.join('data','blink') 
+SAVING_DIR =os.path.join('data','spacy') 
 Path(SAVING_DIR).mkdir(parents=True, exist_ok=True)
 
-TRAIN_FILE = os.path.join(SAVING_DIR,'train.jsonl')
-TEST_FILE = os.path.join(SAVING_DIR,'test.jsonl')
-VALID_FILE = os.path.join(SAVING_DIR,'valid.jsonl')
+TRAIN_FILE = os.path.join(SAVING_DIR,'train.pickle')
+TEST_FILE = os.path.join(SAVING_DIR,'test.pickle')
+VALID_FILE = os.path.join(SAVING_DIR,'valid.pickle')
 # %%
 
 lines = []
@@ -37,82 +39,71 @@ for ontology in ONTOLOGIES:
     for id, data in graph.nodes(data=True):
         
         if 'name' in data:
-            name = data['name'].lower()
+            name = preprocess(data['name'])
         else:
             continue
-
-        # if 'def' in data:
-        #     definition = data['def']
-        # else:
-        #     definition = ''
-
-        # try:
-        #     synonyms = ' '.join(get_synonyms_formatted(graph, data))
-        # except KeyError:
-        #     synonyms = ''
-        words_name = name.split('')
-        if len(words_name)> MAX_NUM_WORDS_ENTITY:
-            continue:
-
-        #find parents
-        parents = get_children_ids(id,graph)
-        if len(parents) < 1:
+        
+        if 'def' in data:
+            definition = preprocess(data['def'])
+        else:
             continue
-        # print(name)
-        for parent_id in parents:
-            jsonline = {}
-            jsonline["world"]=ontology
-            mention = graph.nodes[parent_id]['name']
-            if 'def' in graph.nodes[parent_id]:
-                label = graph.nodes[parent_id]['def']
+        name_len = len(name) 
+        words_name = name.split(' ')
+        if len(words_name)> MAX_NUM_WORDS_ENTITY:
+            continue
+        
+        #find children
+        children = list(set(get_children_ids(id,graph)))
+        for child_id in children:
+            if 'name' in graph.nodes[child_id]:
+                child_name = preprocess(graph.nodes[child_id]['name'])
             else:
                 continue
 
-            jsonline["context_left"]=context
-            jsonline["context_right"]=context
-            jsonline["mention"]=mention
-            jsonline["label"]=label
-            jsonline["label_id"]=int(label_id.split(':')[1])
-            jsonline["label_title"]=label_title
+            if 'def' in graph.nodes[child_id]:
+                child_def = preprocess(graph.nodes[child_id]['def'])
+            else:
+                continue
+            #Searching for ocurrences of the parent name into the names
+            # and definitions of children            
+            #search in name
+            start = child_name.find(name)
+            end = start + name_len
+            if start != -1:
+                lines.append(
+                    (child_name,
+                    {'links': {(start, end): {id: 1.0}},
+                    'entities': [(start, end, None)]}
+                    ))
+            #search in definition
+            start = child_def.find(name)
+            end = start + name_len
+            if start != -1:
+                lines.append(
+                    (child_def,
+                    {'links': {(start, end): {id: 1.0}},
+                    'entities': [(start, end, None)]}
+                    ))                
 
-
-            #Create line
-            lines.append(jsonline)    
-        # print(data)
-        # break
 print("Finished processing ontologies")
 #%% 
 print("Creating the train,test and valid datasets ")
 size_dataset = len(lines)
-size_train=int(size_dataset*0.80)
-size_valid=int(size_dataset*0.10)
+size_train=int(size_dataset*0.90)
+# size_test=int(size_dataset*0.10)
 random.shuffle(lines)
 
 train = lines[:size_train]
-valid = lines[size_train:size_train+size_valid]
-test = lines[size_train+size_valid:]
-dataset = [train,valid,test]
+# valid = lines[size_train:size_train+size_valid]
+test = lines[size_train:]
+dataset = [train,test]
 #%%
 print("Saving to file...")
-json_files = [TRAIN_FILE,VALID_FILE,TEST_FILE]
-for i,jfile in enumerate(json_files):
-    writer = jsonlines.open(jfile, mode='w')
-    writer.write_all(dataset[i])
-    writer.close()
+_files = [TRAIN_FILE,TEST_FILE]
+for i,jfile in enumerate(_files):
+    handle = open(jfile,'wb')
+    pickle.dump(dataset[i],handle)
 
 print("Finished saving to file")
 
 
-#%%
-ontology='go'
-obo_file = os.path.join(ONTO_PATH,ontology,ontology+".obo")
-print('Processing:  ', obo_file)
-graph = obonet.read_obo(obo_file)
-
-# %%
-children = get_children_ids('GO:0016049',graph)
-# %%
-id = 'GO:0016049'
-for child, parent, key in graph.in_edges(id, keys=True):
-    print(f'• {parent} ⟵ {key} ⟵ {child}')
-# %%

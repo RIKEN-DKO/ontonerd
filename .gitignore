@@ -9,6 +9,7 @@ __pycache__/
 *.zip
 *.ttl
 *.jsonl
+*.pickle
 settings.json
 # C extensions
 *.so
