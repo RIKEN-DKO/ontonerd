@@ -1,7 +1,4 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+#my stuff
 *.npy
 *.owl
 *.obo
@@ -11,8 +8,16 @@ __pycache__/
 *.jsonl
 *.pickle
 settings.json
+ontolink/data
+ontolink/data_spacy
 # C extensions
 *.so
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Distribution / packaging
 .Python

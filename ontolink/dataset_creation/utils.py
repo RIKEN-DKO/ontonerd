@@ -59,4 +59,41 @@ def flatten(a):
 def preprocess(str):
     """Common preprocess the strings found in the ontologies
     """
+    commas = str.split('"')
+    #Cleaning when string :
+    #'"very large definition blah blah." [goc:pamgo_curators]'
+    #to get only: 'very large definition blah blah.'
+    if len(commas)>1:
+        str = commas[1]
+
     return str.lower().strip()
+
+
+def create_spacy_line(context, words,qid,insert_space=False):
+
+    start = context.find(words)
+    end = start + len(words)
+    new_context = context
+
+    if insert_space and start != -1:
+        # if context[start - 1] != ' ':
+        #     new_context = context[:start-1] + ' ' + context[start-1:]
+        #     start +=1
+        #     end +=1
+        # if context[end] != ' ':
+        #     new_context = context[:end] + ' ' + context[end:]
+        #     # start +=1
+        #     # end +=1
+        new_context = context[:start] + ' ' + context[start:end]+ ' ' +context[end:]
+        start +=1
+        end +=1
+
+    line = None
+    if start != -1:
+        line = (new_context,
+                {'links': {(start, end): {qid: 1.0}},
+                'entities': [(start, end, None)]}
+                )
+    
+    return line
+

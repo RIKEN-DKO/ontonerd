@@ -14,7 +14,7 @@ import config
 import networkx as nx
 from pathlib import Path
 import obonet
-from utils import get_children_ids, get_synonyms_formatted,preprocess
+from utils import get_children_ids, get_synonyms_formatted,preprocess,create_spacy_line
 import os
 import copy
 import random
@@ -36,7 +36,7 @@ for ontology in ONTOLOGIES:
     obo_file = os.path.join(ONTO_PATH,ontology,ontology+".obo")
     print('Processing:  ', obo_file)
     graph = obonet.read_obo(obo_file)
-    for id, data in graph.nodes(data=True):
+    for qid, data in graph.nodes(data=True):
         
         if 'name' in data:
             name = preprocess(data['name'])
@@ -53,7 +53,7 @@ for ontology in ONTOLOGIES:
             continue
         
         #find children
-        children = list(set(get_children_ids(id,graph)))
+        children = list(set(get_children_ids(qid,graph)))
         for child_id in children:
             if 'name' in graph.nodes[child_id]:
                 child_name = preprocess(graph.nodes[child_id]['name'])
@@ -67,26 +67,20 @@ for ontology in ONTOLOGIES:
             #Searching for ocurrences of the parent name into the names
             # and definitions of children            
             #search in name
-            start = child_name.find(name)
-            end = start + name_len
-            if start != -1:
-                lines.append(
-                    (child_name,
-                    {'links': {(start, end): {id: 1.0}},
-                    'entities': [(start, end, None)]}
-                    ))
-            #search in definition
-            start = child_def.find(name)
-            end = start + name_len
-            if start != -1:
-                lines.append(
-                    (child_def,
-                    {'links': {(start, end): {id: 1.0}},
-                    'entities': [(start, end, None)]}
-                    ))                
+            line = create_spacy_line(child_name,name,qid,insert_space=True)
+            if line is not None:
+                lines.append(line)
+            #def
+            line = create_spacy_line(child_def, name, qid, insert_space=True)
+            if line is not None:
+                lines.append(line)
+            #TODO add synonyns
+        # if len(lines)>2:
+        #     break
+              
 
 print("Finished processing ontologies")
-#%% 
+ #%% 
 print("Creating the train,test and valid datasets ")
 size_dataset = len(lines)
 size_train=int(size_dataset*0.90)
@@ -107,3 +101,12 @@ for i,jfile in enumerate(_files):
 print("Finished saving to file")
 
 
+# #%%
+# a = 'The offsets of theannotationsfor `links` could not be aligned to token boundaries.'
+# strs = 'annotations'
+
+# # %%
+# s = create_spacy_line(a, strs, 111, insert_space=True)
+# print(s)
+# b = s[0]
+# # %%
