@@ -4,13 +4,16 @@ import itertools
 
 def get_synonyms_formatted(graph, data):
     
+    if 'synonym' not in data:
+        return []
+
     res = data['synonym']
     synonyms = []
     for syn in res:
         syn_ = re.findall('"([^"]*)"', syn)
         if len(syn_) == 0:
             continue
-        synonyms.append(syn_[0])
+        synonyms.append(preprocess(syn_[0]))
 
     return synonyms
 
@@ -97,3 +100,37 @@ def create_spacy_line(context, words,qid,insert_space=False):
     
     return line
 
+
+def create_ner_sentence(str, context,tokenizer, insert_space=True):
+
+    start = context.find(str)
+    end = start + len(str)
+    new_context = context
+    if start == -1:
+        return []
+
+    lines = []
+    temp_lines = []
+
+    tokens_str = [token.text for token in tokenizer(str)]
+    doc = tokenizer(context)
+    j=0
+    for i,token in enumerate(doc):
+        if tokens_str[j] == token.text:
+            if j == 0:
+                temp_lines.append(token.text + ' ' + 'B')
+            if j > 0:
+                temp_lines.append(token.text + ' ' + 'I')
+
+            j += 1
+
+            if j >= len(tokens_str):
+                lines.extend(temp_lines)
+                temp_lines=[]
+                j = 0 
+
+        else:
+            j = 0
+            lines.append(token.text)
+
+    return lines
