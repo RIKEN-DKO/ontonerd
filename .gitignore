@@ -10,9 +10,10 @@
 settings.json
 ontolink/data
 ontolink/data_spacy
+data
 # C extensions
 *.so
-
+nohup*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

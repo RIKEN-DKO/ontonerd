@@ -92,7 +92,7 @@ def create_spacy_line(context, words,qid,insert_space=False):
     if start != -1:
         line = (new_context,
                 {'links': {(start, end): {qid: 1.0}},
-                'entities': [(start, end, None)]}
+                 'entities': [(start, end, 'PERSON')]}
                 )
     
     return line

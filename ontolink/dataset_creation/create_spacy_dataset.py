@@ -22,7 +22,7 @@ import pickle
 #%%
 MAX_NUM_WORDS_ENTITY = 2 
 ONTO_PATH = config.ONTOLOGY_FILES_PATH
-ONTOLOGIES=['go'] 
+ONTOLOGIES=config.WORKING_ONTOLOGIES
 SAVING_DIR =os.path.join('data','spacy') 
 Path(SAVING_DIR).mkdir(parents=True, exist_ok=True)
 
