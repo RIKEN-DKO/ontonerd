@@ -119,8 +119,9 @@ def create_ner_sentence(str, context,nlp, insert_last_space=True):
     doc = nlp(context)
     sentence_tokens = [[token.text for token in sent] for sent in doc.sents]
     j=0
-    found_token=False
     for sentence in sentence_tokens:
+        found_token = False
+        temp_lines=[]
         for i,token in enumerate(sentence):
             if tokens_str[j] == token:
                 if j == 0:
@@ -134,21 +135,18 @@ def create_ner_sentence(str, context,nlp, insert_last_space=True):
                 #TODO found several tokens_str
                 if j >= len(tokens_str):
                     found_token = True
-                    lines.extend(temp_lines)
-                    temp_lines=[]
                     j = 0 
 
             else:
                 j = 0
-                lines.append(token + ' ' + 'O')
+                temp_lines.append(token + ' ' + 'O')
 
-        if insert_last_space:
-            lines.append(' ')
+        if found_token:
+            lines.extend(temp_lines)
+            if insert_last_space:
+                lines.append(' ')
 
-    if found_token:
-        return lines
-    else:
-        return []
+    return lines
 
 
 def create_ner_sentences_all(ONTOLOGIES:List[str], ONTO_PATH:str, MIN_LEN_SENTENCE=3, MAX_NUM_SENTENCE_PERDOC=1000):
@@ -252,7 +250,7 @@ def create_ner_sentences_children(ONTOLOGIES: List[str], ONTO_PATH: str, MAX_NUM
                     if len(sentence) > 0:
                         sentences.append(sentence)
 
-            if debug and len(sentences)>10:
+            if debug and len(sentences)>30:
                 print('debug')
                 break
 
