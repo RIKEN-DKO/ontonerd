@@ -95,42 +95,52 @@ def create_spacy_line(context, words,qid,insert_space=False):
     if start != -1:
         line = (new_context,
                 {'links': {(start, end): {qid: 1.0}},
-                 'entities': [(start, end, 'PERSON')]}
+                 'entities': [(start, end, 'ONTO')]}
                 )
     
     return line
 
 
-def create_ner_sentence(str, context,tokenizer, insert_space=True):
+def create_ner_sentence(str, context,nlp, insert_last_space=True):
 
-    start = context.find(str)
-    end = start + len(str)
-    new_context = context
-    if start == -1:
-        return []
+    # start = context.find(str)
+    # end = start + len(str)
+    # new_context = context
+    # if start == -1:
+    #     return []
 
     lines = []
     temp_lines = []
 
-    tokens_str = [token.text for token in tokenizer(str)]
-    doc = tokenizer(context)
+    tokens_str = [token.text for token in nlp(str)]
+    # doc = nlp(context)
+    # sentence_tokens = [[token.text for token in sent] for sent in doc.sents]
     j=0
-    for i,token in enumerate(doc):
-        if tokens_str[j] == token.text:
+    found_token=False
+    # for sentence in sentence_tokens:
+    for i,token in enumerate(context):
+        if tokens_str[j] == token:
             if j == 0:
-                temp_lines.append(token.text + ' ' + 'B')
+                temp_lines.append(token + ' ' + 'B')
             if j > 0:
-                temp_lines.append(token.text + ' ' + 'I')
+                temp_lines.append(token + ' ' + 'I')
 
             j += 1
 
             if j >= len(tokens_str):
+                found_token = True
                 lines.extend(temp_lines)
                 temp_lines=[]
                 j = 0 
 
         else:
             j = 0
-            lines.append(token.text)
+            lines.append(token + ' ' + 'O')
 
-    return lines
+    if insert_last_space:
+        lines.append(' ')
+
+    if found_token:
+        return lines
+    else:
+        return []
