@@ -1,7 +1,10 @@
 import re
+from typing import List
 import networkx
 import itertools
-
+from spacy.lang.en import English
+import obonet
+import os
 def get_synonyms_formatted(graph, data):
     
     if 'synonym' not in data:
@@ -113,34 +116,145 @@ def create_ner_sentence(str, context,nlp, insert_last_space=True):
     temp_lines = []
 
     tokens_str = [token.text for token in nlp(str)]
-    # doc = nlp(context)
-    # sentence_tokens = [[token.text for token in sent] for sent in doc.sents]
+    doc = nlp(context)
+    sentence_tokens = [[token.text for token in sent] for sent in doc.sents]
     j=0
     found_token=False
-    # for sentence in sentence_tokens:
-    for i,token in enumerate(context):
-        if tokens_str[j] == token:
-            if j == 0:
-                temp_lines.append(token + ' ' + 'B')
-            if j > 0:
-                temp_lines.append(token + ' ' + 'I')
+    for sentence in sentence_tokens:
+        for i,token in enumerate(sentence):
+            if tokens_str[j] == token:
+                if j == 0:
+                    temp_lines.append(token + ' ' + 'B')
+                if j > 0:
+                    temp_lines.append(token + ' ' + 'I')
 
-            j += 1
+                j += 1
+                #the str was found
+                #TODO sometimes a sentence doesnt have B I
+                #TODO found several tokens_str
+                if j >= len(tokens_str):
+                    found_token = True
+                    lines.extend(temp_lines)
+                    temp_lines=[]
+                    j = 0 
 
-            if j >= len(tokens_str):
-                found_token = True
-                lines.extend(temp_lines)
-                temp_lines=[]
-                j = 0 
+            else:
+                j = 0
+                lines.append(token + ' ' + 'O')
 
-        else:
-            j = 0
-            lines.append(token + ' ' + 'O')
-
-    if insert_last_space:
-        lines.append(' ')
+        if insert_last_space:
+            lines.append(' ')
 
     if found_token:
         return lines
     else:
         return []
+
+
+def create_ner_sentences_all(ONTOLOGIES:List[str], ONTO_PATH:str, MIN_LEN_SENTENCE=3, MAX_NUM_SENTENCE_PERDOC=1000):
+    """This one first create a catalog of documents. Then for each node name search in every dcoument. 
+
+    """
+    nlp = English()
+    nlp.add_pipe("sentencizer")
+    sentences = []
+    for ontology in ONTOLOGIES:
+        obo_file = os.path.join(ONTO_PATH, ontology, ontology+".obo")
+        print('Processing:  ', obo_file)
+        graph = obonet.read_obo(obo_file)
+        #first when construct a list of documents to search for entity names
+        docs = []
+        for qid, data in graph.nodes(data=True):
+            for_process = []
+            if 'name' in data:
+                name = preprocess(data['name'])
+                for_process.append(name)
+                # docs.append(name)
+
+            if 'def' in data:
+                definition = preprocess(data['def'])
+                # docs.append(definition)
+                for_process.append(definition)
+
+            synonyms = get_synonyms_formatted(graph, data)
+            for_process.extend(synonyms)
+            # docs.extend(synonyms)
+
+            for text in for_process:
+                doc = nlp(text)
+                sentence_tokens = [[token.text for token in sent]
+                                for sent in doc.sents]
+
+                for sentence in sentence_tokens:
+                    if len(sentence) >= MIN_LEN_SENTENCE:
+                        docs.append(sentence)
+
+        #We search entity name in each document
+        for qid, data in graph.nodes(data=True):
+            if 'name' in data:
+                name = preprocess(data['name'])
+
+            num_sentences = 0
+            for doc in docs:
+                if num_sentences > MAX_NUM_SENTENCE_PERDOC:
+                    break
+                sentence = create_ner_sentence(name, doc, nlp)
+                if len(sentence) > 0:
+                    sentences.append(sentence)
+                    num_sentences += 1
+
+    return sentences
+
+
+def create_ner_sentences_children(ONTOLOGIES: List[str], ONTO_PATH: str, MAX_NUM_WORDS_ENTITY=10,debug=False):
+
+    nlp = English()
+    nlp.add_pipe("sentencizer")
+    sentences = []
+    for ontology in ONTOLOGIES:
+        obo_file = os.path.join(ONTO_PATH, ontology, ontology+".obo")
+        print('Reading ontology:  ', obo_file)
+        graph = obonet.read_obo(obo_file)
+        #TODO add bar tqdm
+        print('Exploring nodes..')
+        for qid, data in graph.nodes(data=True):
+
+            if 'name' in data:
+                name = preprocess(data['name'])
+            else:
+                continue
+
+            name_len = len(name)
+            words_name = name.split(' ')
+            #Very long names shouldn't be search 
+            if len(words_name) > MAX_NUM_WORDS_ENTITY:
+                continue
+            
+            #TODO search for the synonyms names too... 
+             
+            #find the name in the children
+            children = list(set(get_children_ids(qid, graph)))
+            for child_id in children:
+                docs = []
+                child_data = graph.nodes[child_id]
+                if 'name' in child_data:
+                    child_name = preprocess(child_data['name'])
+                    docs.append(child_name)
+
+                if 'def' in child_data:
+                    child_def = preprocess(child_data['def'])
+                    docs.append(child_def)
+
+                synonyms = get_synonyms_formatted(graph, child_data)
+                docs.extend(synonyms)
+                for doc in docs:
+                    sentence = create_ner_sentence(name, doc, nlp)
+                    if len(sentence) > 0:
+                        sentences.append(sentence)
+
+            if debug and len(sentences)>10:
+                print('debug')
+                break
+
+    print("Finished processing ontologies")
+    return sentences
