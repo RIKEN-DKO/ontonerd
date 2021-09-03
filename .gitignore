@@ -8,6 +8,9 @@
 *.jsonl
 *.pickle
 *.spacy
+*.tsv
+*.pt
+*.txt
 settings.json
 ontolink/data
 ontolink/data_spacy

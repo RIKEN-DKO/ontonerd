@@ -49,3 +49,14 @@ PYTHONPATH=ontolink python ontolink/train_spacy_EL.py
 ```
 PYTHONPATH=ontolink python ontolink/dataset_creation/create_NER_dataset.py
 ```
+## train 
+
+```
+PYTHONPATH=ontolink python ontolink/train_flair_NER_transformers.py
+```
+
+```
+PYTHONPATH=ontolink python ontolink/train_flair_NER_LSTM.py
+```
+
+
