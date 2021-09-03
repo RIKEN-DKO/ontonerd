@@ -40,7 +40,11 @@ DEVEL_FILE = os.path.join(SAVING_DIR,'devel.txt')
 # %%
 
 
-sentences = create_ner_sentences_children(  ONTOLOGIES, ONTO_PATH, MAX_NUM_WORDS_ENTITY=5)
+sentences = create_ner_sentences_children(
+    ONTOLOGIES, 
+    ONTO_PATH, 
+    MAX_NUM_WORDS_ENTITY=5,
+    char_space=' ')
        
 
 #%% 

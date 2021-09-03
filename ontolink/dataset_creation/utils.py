@@ -104,7 +104,7 @@ def create_spacy_line(context, words,qid,insert_space=False):
     return line
 
 
-def create_ner_sentence(str, context,nlp, insert_last_space=True):
+def create_ner_sentence(str, context,nlp, insert_last_space=True,char_space=' '):
 
     # start = context.find(str)
     # end = start + len(str)
@@ -143,8 +143,10 @@ def create_ner_sentence(str, context,nlp, insert_last_space=True):
 
         if found_token:
             lines.extend(temp_lines)
+            if lines[-1] !='. O':
+                lines.append('. O')
             if insert_last_space:
-                lines.append(' ')
+                lines.append(char_space)
 
     return lines
 
@@ -204,8 +206,26 @@ def create_ner_sentences_all(ONTOLOGIES:List[str], ONTO_PATH:str, MIN_LEN_SENTEN
     return sentences
 
 
-def create_ner_sentences_children(ONTOLOGIES: List[str], ONTO_PATH: str, MAX_NUM_WORDS_ENTITY=10,debug=False):
+def create_ner_sentences_children(
+        ONTOLOGIES: List[str], 
+        ONTO_PATH: str, 
+        MAX_NUM_WORDS_ENTITY=10,
+        debug=False,
+        char_space=' '):
+    """Creates the sentences from the ontology files. For each node it explored their children
+    and checks if the name of the node is contained into the name and descriptions of the children.
 
+    :param ONTOLOGIES: [description]
+    :type ONTOLOGIES: List[str]
+    :param ONTO_PATH: [description]
+    :type ONTO_PATH: str
+    :param MAX_NUM_WORDS_ENTITY: [description], defaults to 10
+    :type MAX_NUM_WORDS_ENTITY: int, optional
+    :param debug: [description], defaults to False
+    :type debug: bool, optional
+    :return: [description]
+    :rtype: [type]
+    """
     nlp = English()
     nlp.add_pipe("sentencizer")
     sentences = []
@@ -246,7 +266,8 @@ def create_ner_sentences_children(ONTOLOGIES: List[str], ONTO_PATH: str, MAX_NUM
                 synonyms = get_synonyms_formatted(graph, child_data)
                 docs.extend(synonyms)
                 for doc in docs:
-                    sentence = create_ner_sentence(name, doc, nlp)
+                    sentence = create_ner_sentence(
+                        name, doc, nlp, char_space)
                     if len(sentence) > 0:
                         sentences.append(sentence)
 
@@ -256,3 +277,41 @@ def create_ner_sentences_children(ONTOLOGIES: List[str], ONTO_PATH: str, MAX_NUM
 
     print("Finished processing ontologies")
     return sentences
+
+def create_pem_dictionary(ONTOLOGIES: List[str], ONTO_PATH: str):
+
+    pem={}
+    mention_freq = {}
+    for ontology in ONTOLOGIES:
+        obo_file = os.path.join(ONTO_PATH, ontology, ontology+".obo")
+        print('Reading ontology:  ', obo_file)
+        graph = obonet.read_obo(obo_file)
+        #TODO add bar tqdm
+        print('Exploring nodes..')
+        for qid, data in graph.nodes(data=True):
+            mentions = []
+            if 'name' in data:
+                name = preprocess(data['name'])
+                mentions.append(name)
+
+            synonyms = get_synonyms_formatted(graph, data)
+            mentions.extend(synonyms)
+
+            for mention in mentions:
+                if mention not in mention_freq:
+                    mention_freq[mention] = 1
+                else:
+                    mention_freq[mention] += 1
+
+                if mention in pem:
+                    if qid not in pem[mention]:
+                        pem[mention][qid] = 1
+                    else:
+                        pem[mention][qid] += 1
+                else:
+                    pem[mention]={qid:1}
+
+
+    return pem,mention_freq
+
+            
