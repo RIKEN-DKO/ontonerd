@@ -47,7 +47,11 @@ PYTHONPATH=ontolink python ontolink/train_spacy_EL.py
 
 ## Creating NER dataset
 ```
-PYTHONPATH=ontolink python ontolink/dataset_creation/create_NER_dataset.py
+PYTHONPATH=ontolink python ontolink/dataset_creation/create_NER_dataset_flair.py
+```
+
+```
+PYTHONPATH=ontolink python ontolink/dataset_creation/create_NER_dataset_BERT.py
 ```
 ## train 
 
@@ -59,4 +63,5 @@ PYTHONPATH=ontolink python ontolink/train_flair_NER_transformers.py
 PYTHONPATH=ontolink python ontolink/train_flair_NER_LSTM.py
 ```
 
+The dataset created for BERT is being trained on repo ../merge_NER_data
 
