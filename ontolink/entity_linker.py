@@ -10,8 +10,6 @@ from nltk.corpus import stopwords
 # from functools import partial
 # from pathos.multiprocessing import ProcessingPool as Pool
 
-import dask
-import dask.bag as db
 import time
 
 import numpy as np
@@ -28,40 +26,13 @@ class EntityLinker:
         print(self.entities_list_np.shape)
         self.terms_frequency = terms_frequency
         self.collection_size_terms = collection_size_terms
-        self.entities_bag = db.from_sequence(
-            entities_descriptions.keys())
+
 
         self.ner_model = ner_model
         # ncpu = cpu_count()
         # print('Creating multiprocessing pool of {} size '.format(ncpu))
         # self.pool = Pool(int(ncpu/2))
 
-    def score_E_q_m_par(self, q, m, k_top=10):
-        """ Parallel version. Score  in the question (q) given mention(m)   
-            From Balog 7.3.3.1
-            Returns a list of entities ID in decreasion order 
-            TODO: this function doesn't finishes...
-        """
-        # entities = self.entities_descriptions
-        # e_scores = [-1] * k_top
-        # topk_entities = [0] * k_top
-        def score(e):
-            return self.score_e_q_m(e,q,m)
-
-        pool = Pool(4)
-        e_score = pool.map(score,self.entities_list)
-
-        # for entity in self.entities_list:
-        #     # print(entity,desc)
-        #     score = self.score_e_q_m(entity, q, m)
-        #     #Try to insert scores if bigger than any element
-        #     i, e_scores = insert_if_anybig(e_scores, score)
-        #     #If a insertion happen
-        #     if i != -1:
-        #         topk_entities[i] = entity
-
-        # return zip(topk_entities, e_scores)
-        return e_score
 
     def link_entities_query(self,query,use_ner=True):
         """
@@ -110,43 +81,6 @@ class EntityLinker:
         return interpretations
 
         return entities_scores_mentions
-
-
-    def link_entities_query_dask(self, query):
-        """
-        Process the query, find mentions and for each mention show the top-k 
-        possible entities for each mention. 
-        """
-        #tokenize
-        tokens = word_tokenize(query)
-        stop_words = set(stopwords.words("english"))
-        filtered_tokens = []
-        for w in tokens:
-            #do not take stop words
-            if w not in stop_words:
-                filtered_tokens.append(w)
-        #For each token find if some is a mention. Search the dictionary of mentions.
-
-        mentions_dict = self.commonness_dict
-        mentions = [m for m in filtered_tokens if m in mentions_dict]
-
-        print("Analizing mentions:", mentions)
-        #Score entities for each mention
-
-        #TODO Slow bootleneck
-        entities_scores_mentions = {}
-        scored_entities_list = []
-        for mention in mentions:
-
-            scored_entities= dask.delayed(self.score_E_q_m_filterby_pem)(query, mention)
-            scored_entities_list.append(scored_entities)
-            
-        # entities_scores_mentions[mention] = scored_entities
-        return dask.compute(*scored_entities_list)
-
-        # interpretations = self.gen_interpretations(entities_scores_mentions)
-
-        # return interpretations
 
 
     def gen_interpretations(self, entities_scores_mentions:dict,method='max'):
@@ -253,101 +187,6 @@ class EntityLinker:
             print("Bootleneck  took: {} s".format(time.time() - start))
 
             return (self.entities_list[imax],e_scores[imax])
-
-
-
-
-
-    def score_E_q_m_filterby_pem_dask(self, q, m, k_top=10, k_pem=100):
-        """ Score  in the question (q) given mention(m)   
-            From Balog 7.3.3.1
-            This version first computes P(e|m) for all entities since is fast. Then computes P(q|e)
-            on the top-K from p(e|m)
-            Returns a list of entities ID in decreasion order 
-        """
-        # start = time.time()
-        # the list for the top k p(e|m) scores
-        pem_scores = []
-        # pem_entities = [0] * k_pem
-        #filter by p(e|m)
-        print("DASK version")
-        ##HEre's the bottle neck
-        # for entity in self.entities_list:
-        #     # print(entity,desc)
-        #     # score = self.score_e_q_m(entity, q, m)
-        #     if entity == 0 or entity == '0':
-        #         continue
-        #     #p(e|m) can be stored too?
-        #     pem_score = dask.delayed(self.p_e_m)(entity, m)
-        def PEM(e):
-            return self.p_e_m(e,m)
-        #     pem_scores.append(pem_score)
-        results = self.entities_bag.map(PEM).compute()
-        # dask.compute(*pem_scores)
-        ###Bottle neck
-        #DEbug[] sort
-        pem_scores = pem_scores[:k_pem]
-        # print("Bootleneck  took: {} s".format(time.time() - start))
-        # list of final scores
-        e_scores = [-1] * k_top
-        topk_entities = [0] * k_top
-
-        # for j, entity in enumerate(pem_entities):
-        # for j, entity in enumerate(self.entities_list[:k_pem]):
-        #     pqe_score = self.p_q_e(q, entity)
-        #     eqm_score = pem_scores[j] * pqe_score
-        #     i, e_scores = insert_if_anybig(e_scores, eqm_score)
-        #     #If a insertion happen
-        #     if i != -1:
-        #         topk_entities[i] = entity
-
-        return zip(topk_entities, e_scores)
-
-
-    def score_E_q_m_filterby_pem_par(self,q, m, k_top=10, k_pem=100):
-        """ Score  in the question (q) given mention(m)   
-            Parallel version: TODO DONT WORK
-            From Balog 7.3.3.1
-            This version first computes P(e|m) for all entities since is fast. Then computes P(q|e)
-            on the top-K from p(e|m)
-            Returns a list of entities ID in decreasion order 
-
-        """ 
-        # start = time.time()
-        # the list for the top k p(e|m) scores
-        #filter by p(e|m)
-        print('par v2')    
-       
-        # for entity in self.entities_list:
-        #     pem_score = self.p_e_m(entity, m)
-        #     i, pem_scores = insert_if_anybig(pem_scores, pem_score)
-        #     if i != -1:
-        #         pem_entities[i] = entity
-
-        # partial is for the second constant argument 
-        _pem_scores = self.pool.map(partial(self.p_e_m,m=m,return_entity=True), self.entities_list)
-        #pem_score is descending [10,2,1.4,...]
-        #second element is the scores
-        _pem_scores.sort(key=lambda x: x[1], reverse=True)
-        # obtain a separated list of entities and scores
-        _entities_scores = list(zip(*r))
-        pem_entities = list(_entities_scores[0])[:k_pem]
-        pem_scores = list(_entities_scores[1])[k:pem]
-
-        # print("Bootleneck  took: {} s".format(time.time() - start))
-        # list of final scores
-        e_scores = [-1] * k_top
-        topk_entities = [0] * k_top
-
-        for j, entity in enumerate(pem_entities):
-            pqe_score = self.p_q_e(q, entity)
-            eqm_score = pem_scores[j] * pqe_score
-            i, e_scores = insert_if_anybig(e_scores, eqm_score)
-            #If a insertion happen
-            if i != -1:
-                topk_entities[i] = entity
-
-        return zip(topk_entities, e_scores)
 
 
 
