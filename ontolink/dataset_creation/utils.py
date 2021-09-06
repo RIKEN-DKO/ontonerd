@@ -296,22 +296,29 @@ def create_pem_dictionary(ONTOLOGIES: List[str], ONTO_PATH: str):
 
             synonyms = get_synonyms_formatted(graph, data)
             mentions.extend(synonyms)
-
+            children = list(set(get_children_ids(qid, graph)))
+            num_links = len(children)
             for mention in mentions:
                 if mention not in mention_freq:
-                    mention_freq[mention] = 1
+                    mention_freq[mention] = num_links + 1
                 else:
                     mention_freq[mention] += 1
 
                 if mention in pem:
                     if qid not in pem[mention]:
-                        pem[mention][qid] = 1
+                        pem[mention][qid] = num_links + 1
                     else:
                         pem[mention][qid] += 1
                 else:
-                    pem[mention]={qid:1}
+                    pem[mention] = {qid: num_links + 1}
 
+    #Computing pem
+    for mention,count in mention_freq.items():
+        if mention in pem:
+            for qid,freq in pem[mention].items():
+                pem[mention][qid]=freq/count
 
+    print('[FINISHED]Exploring nodes..')
     return pem,mention_freq
 
             

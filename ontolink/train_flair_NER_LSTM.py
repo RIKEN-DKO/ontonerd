@@ -44,7 +44,7 @@ trainer = ModelTrainer(tagger, corpus)
 # 7. start training
 trainer.train('resources/taggers/sota-ner-flair',
               learning_rate=0.1,
-              mini_batch_size=50,
+              mini_batch_size=32,
               max_epochs=150,
-              embeddings_storage_mode='gpu',
+              embeddings_storage_mode='cpu', #'gpu',
               checkpoint=True)

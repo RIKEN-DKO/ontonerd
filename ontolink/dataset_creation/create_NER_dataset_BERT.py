@@ -24,7 +24,7 @@ import spacy
 from spacy.lang.en import English
 #%%
 #bert SUPPORT 512
-MAX_NUM_TOKEN_SEN = 512
+MAX_NUM_TOKEN_SEN = 500
 ONTO_PATH = config.ONTOLOGY_FILES_PATH
 ONTOLOGIES=config.WORKING_ONTOLOGIES
 # ONTOLOGIES=['go']
@@ -70,6 +70,8 @@ dataset = [train,train_dev,test,devel]
 
 for i,_sentences in enumerate(_dataset):
     for sentence in _sentences:
+        if sentence[-2] != '. O':
+            sentence[-1] = '. O'
         if len(sentence) > MAX_NUM_TOKEN_SEN:
             dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN])
         else:

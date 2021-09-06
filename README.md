@@ -65,3 +65,10 @@ PYTHONPATH=ontolink python ontolink/train_flair_NER_LSTM.py
 
 The dataset created for BERT is being trained on repo ../merge_NER_data
 
+# P(e|m)
+
+creating dictionaries
+
+```
+PYTHONPATH=ontolink python ontolink/dataset_creation/create_pem_dict.py
+```
