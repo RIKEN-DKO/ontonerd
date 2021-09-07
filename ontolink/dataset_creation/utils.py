@@ -3,8 +3,11 @@ from typing import List
 import networkx
 import itertools
 from spacy.lang.en import English
+import spacy
 import obonet
 import os
+from tqdm import tqdm
+
 def get_synonyms_formatted(graph, data):
     
     if 'synonym' not in data:
@@ -322,3 +325,49 @@ def create_pem_dictionary(ONTOLOGIES: List[str], ONTO_PATH: str):
     return pem,mention_freq
 
             
+def get_nodes_description(ONTOLOGIES: List[str], ONTO_PATH: str):
+    
+    nlp = English()
+    # nlp = spacy.load('en_core_web_trf')
+    nlp.add_pipe("sentencizer")
+    all_stopwords = nlp.Defaults.stop_words
+    
+    entity2description = {}
+    for ontology in ONTOLOGIES:
+        obo_file = os.path.join(ONTO_PATH, ontology, ontology+".obo")
+        print('Reading ontology:  ', obo_file)
+        graph = obonet.read_obo(obo_file)
+        #TODO add bar tqdm
+        print('Exploring nodes..')
+        pbar = tqdm(total=len(graph))
+        for qid, data in graph.nodes(data=True):
+            desc = []
+            if 'name' in data:
+                name = preprocess(data['name'])
+                desc.append(name)
+
+            if 'def' in data:
+                definition = preprocess(data['def'])
+                desc.append(definition)
+
+            synonyms = get_synonyms_formatted(graph, data)
+            for synonym in synonyms:
+                desc.append(synonym)
+            sentence_tokens = []
+            for des in desc:
+                doc = nlp(des)
+                sentence_tokens.append([token.text for token in doc if not token.is_punct ])
+
+            sentence_tokens = list(set(flatten(sentence_tokens)))
+            sentence_tokens = [
+                word for word in sentence_tokens 
+                if not word in all_stopwords]
+
+
+            entity2description[qid] = tuple(sentence_tokens)
+            pbar.update(1)
+    
+    return entity2description
+
+        
+

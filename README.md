@@ -72,3 +72,7 @@ creating dictionaries
 ```
 PYTHONPATH=ontolink python ontolink/dataset_creation/create_pem_dict.py
 ```
+
+```
+PYTHONPATH=ontolink python ontolink/dataset_creation/create_entity2description.py
+```
