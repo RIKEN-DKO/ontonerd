@@ -40,3 +40,25 @@ pickle.dump(entity2description, handle)
 
 print("Finished saving to file")
 
+
+#%%
+# ontology='go'
+# obo_file = os.path.join(ONTO_PATH, ontology, ontology+".obo")
+# print('Reading ontology:  ', obo_file)
+# graph = obonet.read_obo(obo_file)
+
+# # %%
+# graph.nodes['GO:0031012']
+
+# # %%
+
+# graph.nodes['GO:0005578']
+
+# # %%
+
+# for qid, data in graph.nodes(data=True):
+#     if qid == 'GO:0005578':
+#         print('the data',data)
+
+# print('My search ended')
+# %%

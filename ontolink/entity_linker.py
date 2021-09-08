@@ -1,86 +1,80 @@
+from typing import List
 import nltk
 from nltk.probability import FreqDist
 from nltk.tokenize import sent_tokenize, word_tokenize
 from utils import insert_if_anybig
-# from multiprocessing import Pool
-# from pathos.multiprocessing import ProcessingPool as Pool
+from dataset_creation.utils import get_clean_tokens
 from itertools import repeat
 from nltk.corpus import stopwords
-# from multiprocessing import cpu_count
-# from functools import partial
-# from pathos.multiprocessing import ProcessingPool as Pool
-
+from spacy.lang.en import English
+from flair.data import Sentence
 import time
-
 import numpy as np
 
 class EntityLinker:
     """
     TODO add doc
     """
-    def __init__(self, commonness_dict, entities_descriptions, terms_frequency,collection_size_terms,ner_model=None):
-        self.commonness_dict = commonness_dict
-        self.entities_descriptions = entities_descriptions
-        self.entities_list = list(entities_descriptions.keys())
+    def __init__(self, 
+    mention2pem, 
+    entity2description, 
+    mention_freq,
+    collection_size_terms,
+    ner_model=None,
+    ner_model_type='flair'):
+        self.mention2pem = mention2pem
+        self.entity2description = entity2description
+        self.entities_list = list(entity2description.keys())
         self.entities_list_np = np.asarray(self.entities_list)
         print(self.entities_list_np.shape)
-        self.terms_frequency = terms_frequency
+        self.mention_freq = mention_freq
+        #TODO is necesary?
         self.collection_size_terms = collection_size_terms
 
+        #TODO maybe strategy pattern is better here
+        self.nlp = English()
+        self.nlp.add_pipe("sentencizer")
 
+        
         self.ner_model = ner_model
         # ncpu = cpu_count()
         # print('Creating multiprocessing pool of {} size '.format(ncpu))
         # self.pool = Pool(int(ncpu/2))
 
 
-    def link_entities_query(self,query,use_ner=True):
+    def link_entities(self,text,use_ner=True):
         """
         Process the query, find mentions and for each mention show the top-k 
         possible entities for each mention. 
         """
-        #tokenize
-        tokens = word_tokenize(query)
-        stop_words = set(stopwords.words("english"))
-        filtered_tokens = []
-        for w in tokens:
-            #do not take stop words
-            if w not in stop_words:
-                filtered_tokens.append(w)
 
-        #Obtain mentions give by the BERT model
-        if use_ner and self.ner_model != None:
-            bert_mentions = self.ner_model(query)
-            #Return a list of dictionaries
-            # [{'entity_group': 'bio',
-            #   'score': 0.9997287392616272,
-            #   'word': 'hiv',
-            #   'start': 22,
-            #   'end': 25},
-            for men_group in bert_mentions:
-                mention = men_group['word']
-                if mention not in filtered_tokens:
-                    filtered_tokens.append(mention)
+        text_tokens = get_clean_tokens(text,self.nlp)
+
+        mentions_ner = get_mentions_ner(text,self.ner_model,model_type='flair')
+
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
-        mentions_dict = self.commonness_dict
-        mentions = [m for m in filtered_tokens if m in mentions_dict]
+        mention2pem = self.mention2pem
+        mentions = [m for m in mentions_ner if m in mention2pem]
         
         print("Analizing mentions:",mentions)
         #Score entities for each mention
 
-        #TODO Slow bootleneck    
+        #TODO Slow bootleneck   
+
         entities_scores_mentions = {}
         for mention in mentions:
 
-            scored_entities = self.score_E_q_m_filterby_pem(query, mention)
+            # scored_entities = self.score_E_q_m_filterby_pem(text, mention)
+            scored_entities = self.score_E_q_m(text_tokens, mention)
             entities_scores_mentions[mention] = scored_entities
 
 
         interpretations = self.gen_interpretations(entities_scores_mentions)
-        return interpretations
 
-        return entities_scores_mentions
+        return interpretations
+        
+        # return entities_scores_mentions
 
 
     def gen_interpretations(self, entities_scores_mentions:dict,method='max'):
@@ -112,7 +106,7 @@ class EntityLinker:
         
         return new_entities_scores_mentions
     #Slow
-    def score_E_q_m(self,q,m,k_top=10):
+    def score_E_q_m(self,text_tokens,m,k_top=10):
         """ Score  in the question (q) given mention(m)   
             From Balog 7.3.3.1
             Returns a list of entities ID in decreasion order 
@@ -127,14 +121,16 @@ class EntityLinker:
             # Ids equal to zero are not useful
             if entity == 0 or entity == '0':
                 continue
-            score = self.score_e_q_m(entity, q, m)
+            score = self.score_e_q_m(entity, text_tokens, m)
             #Try to insert scores if bigger than any element
+            #TODO insert_if_anybig is slow?
             i,e_scores = insert_if_anybig(e_scores,score)
             #If a insertion happen
             if i != -1:
                 topk_entities[i] = entity
 
         return zip(topk_entities,e_scores)
+
     #TODO slow
         """ es ID in decreasion order 
             k_pem: 
@@ -158,7 +154,9 @@ class EntityLinker:
         start = time.time()
 
         #TODO map np ? 
-        pem_scores = [self.p_e_m(entity, m) for entity in self.entities_list]
+        # pem_scores = [self.p_e_m(entity, m) for entity in self.entities_list]
+        pem_scores = self.mention2pem[m].values()
+
         if mode== 'sorted': 
             _pem_scores = np.asarray(pem_scores)
             ind = _pem_scores.argsort()
@@ -190,13 +188,13 @@ class EntityLinker:
 
 
 
-    def score_e_q_m(self, e: int, q, m):
+    def score_e_q_m(self, e: int, text_tokens, m):
         """ Score the given entity (e) in the question (q) given mention(m)   
             From Balog 7.3.3.1
         """
         #TODO change p_m_m e to string
         P_e_m = self.p_e_m(e, m)
-        P_q_e = self.p_q_e(q, e)   
+        P_q_e = self.p_q_e(text_tokens, e)   
 
         return P_e_m*P_q_e
 
@@ -206,51 +204,17 @@ class EntityLinker:
         """Commonness P(e|m)
         P(e|m) = n(e,m)/Total
 
-        n(e,m) = Number of times e it is used as a link destination for m
-
         `m`:mention
         `e`:entity ID
-        dic_comm[Mention]
-        e.g
-        mentions['chloride'] = {'entities': [
-            4167203, 254493001], 'num_entity': [78637, 2], 'num': 78639}
-
-        `entities`: An array of entities related with mention
-        `num_entity`: The number of times the entity in `entities` is used
-        `num`:the Total number of times mention(m) is linked with  entity(e)
-
         """
-        
-        #ignored entity ids equal to zero
-        if e == 0 or e == '0':
-            return 0
-
-        mentions = self.commonness_dict
-        mention = m
-        EntityID = e
-        n_em = 0
-        total_n = 1
-        if mention in mentions:
-            #search for the index of the entityID 
-            index_entity = -1
-            entities = mentions[mention]["entities"]
-            for i,e in enumerate(entities):
-                if e == EntityID:
-                    index_entity = i
-            
-            if index_entity != -1 :
-                n_em = mentions[mention]["num_entity"][index_entity]
-                total_n = mentions[mention]["num"]
+        #mention2pem['reproduction'] = {'GO:0000003': 1.0}
+        #mention2pem['mention mention'] = {'ID': p(e|m)}
+        pem = 0
+        if e in self.mention2pem[m]:
+            pem = self.mention2pem[m][e]
 
 
-                #If the entityID exist inside
-                # index_entity = mentions[mention]["entities"].index(EntityID)
-            # except ValueError:
-            #     #EntityID do not exist
-            #     #TODO: Check where the Error comes index or []
-            #     # print('Entity not found')
-            #     pass
-        pem = n_em / total_n
+
         if return_entity:
             return e,pem
         else:
@@ -266,27 +230,29 @@ class EntityLinker:
 
             entities_desc , dictionary of entities descriptions
         """
-        entities_desc = self.entities_descriptions
+        entities_desc = self.entity2description
         count = 0
         tokens = ['']
-        try:
-            tokens = entities_desc[e]
-            # tokens = word_tokenize(description)
-            # print(tokens)
-            # print(description)
-            for token in tokens:
-                if token == t:
-                    count += 1
-        except KeyError:
-            # print('Entity {} not found in dictionary'.format(e))
-            pass
+
+        #TODO there' a case with no description?
+        tokens = entities_desc[e]
+        if len(tokens)<1:
+            # print('Entity with no desc:',e)
+            tokens = ['']
+        # tokens = word_tokenize(description)
+        # print(tokens)
+        # print(description)
+        for token in tokens:
+            if token == t:
+                count += 1
+
 
         if return_len:
             return len(tokens), count
 
         return count
 
-    def p_t_thetae(self, e:int, t,return_parts = False):
+    def p_t_thetae(self, e, t,return_parts = False):
         """ P (t|θe)
         `entity_catalog`: A dict of entities and descriptions
 
@@ -296,9 +262,9 @@ class EntityLinker:
         P(t|e) = c(t;e)/le 
         
         """
-        terms_freq = self.terms_frequency
+        terms_freq = self.mention_freq
         collection_size_terms = self.collection_size_terms
-        entity_catalog = self.entities_descriptions
+        entity_catalog = self.entity2description
         le, cte = self.c(e, t, return_len=True)
         p_t_e = cte/le
         lamb_ = 0.5
@@ -324,7 +290,7 @@ class EntityLinker:
         return (1-lamb_) * p_t_e + lamb_ * p_t_E
 
 
-    def p_q_e(self, q, e:int):
+    def p_q_e(self, text_tokens, e):
         """
             P(q|e) probability of questions give an entity
             Equation 7.5 Balog
@@ -332,11 +298,12 @@ class EntityLinker:
             q:question
             e:entity
         """
-
-        tokens = word_tokenize(q)
+        # tokens = word_tokenize(q)
         #get the counter of each term
-        terms = FreqDist(tokens)
-        lq = len(tokens)
+        
+        #TODO change to spacy
+        terms = FreqDist(text_tokens)
+        lq = len(text_tokens)
         lamb_ = 0.5
         mul_up = 1
         mul_down = 1
@@ -344,10 +311,34 @@ class EntityLinker:
 
             p_t_e, p_t_E = self.p_t_thetae(e, t, return_parts=True)
             p_t_theta = (1-lamb_) * p_t_e + lamb_ * p_t_E
-            if p_t_E == 0 and p_t_e == 0:
+            if p_t_E == 0 or p_t_e == 0:
                 continue
             mul_up *= (pow(p_t_theta, c_tq/lq)) 
             mul_down *= (pow(p_t_E, c_tq/lq))
 
         return mul_up/mul_down
 
+
+def get_mentions_ner(text:str,nlp,model_type='flair') -> List[str]:
+
+    if model_type=='flair':
+        return get_mentions_flair(text,nlp)
+        
+
+
+def get_mentions_flair(text,nlp):
+    sentence = Sentence(text)
+    nlp.predict(sentence)
+
+    mentions = []
+    last_end = -3
+    i = 0
+    for entity in sentence.to_dict(tag_type='ner')['entities']:
+        if (last_end+1) == entity['start_pos']:
+            mentions[i-1] += ' ' + entity['text']
+        else:
+            mentions.append(entity['text'])
+            i += 1
+        last_end = entity['end_pos']
+
+    return mentions

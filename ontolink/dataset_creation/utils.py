@@ -341,6 +341,7 @@ def get_nodes_description(ONTOLOGIES: List[str], ONTO_PATH: str):
         print('Exploring nodes..')
         pbar = tqdm(total=len(graph))
         for qid, data in graph.nodes(data=True):
+            pbar.update(1)
             desc = []
             if 'name' in data:
                 name = preprocess(data['name'])
@@ -363,11 +364,26 @@ def get_nodes_description(ONTOLOGIES: List[str], ONTO_PATH: str):
                 word for word in sentence_tokens 
                 if not word in all_stopwords]
 
-
-            entity2description[qid] = tuple(sentence_tokens)
-            pbar.update(1)
+            sentence_tokens = tuple(sentence_tokens)
+            #preventing empty descriptions
+            if len(sentence_tokens)>0:
+                entity2description[qid] = sentence_tokens
+            else: 
+                entity2description[qid] = ('#UNK')
     
     return entity2description
 
         
+def get_clean_tokens(text,nlp):
+    text_tokens = []
+    doc = nlp(text)
+    all_stopwords = nlp.Defaults.stop_words
+    text_tokens.append([token.text for token in doc if not token.is_punct ])
+    text_tokens = list(set(flatten(text_tokens)))
+    text_tokens = [
+        word for word in text_tokens
+        if not word in all_stopwords]
+    
+    return text_tokens
+
 
