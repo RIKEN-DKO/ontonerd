@@ -72,6 +72,10 @@ creating dictionaries
 ```
 PYTHONPATH=ontolink python ontolink/dataset_creation/create_pem_dict.py
 ```
+this creates an dict:
+a['mention'] ->  {'entityID1': p(e|m),'entityID2': p(e|m)} 
+a['reproduction'] ->  {'GO:0000003': 1.0} 
+
 
 ```
 PYTHONPATH=ontolink python ontolink/dataset_creation/create_entity2description.py
