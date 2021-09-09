@@ -1,8 +1,7 @@
 from typing import List
 
-from utils import insert_if_anybig
-from dataset_creation.utils import get_clean_tokens
-from itertools import repeat
+
+from dataset_creation.utils import get_clean_tokens,preprocess
 from nltk.corpus import stopwords
 from spacy.lang.en import English
 from flair.data import Sentence
@@ -48,7 +47,8 @@ class EntityLinker:
         Process the query, find mentions and for each mention show the top-k 
         possible entities for each mention. 
         """
-
+        text = preprocess(text)
+        print(text)
         text_tokens = get_clean_tokens(text,self.nlp)
 
         mentions_ner = get_mentions_ner(text,self.ner_model,model_type='flair')

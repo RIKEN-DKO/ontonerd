@@ -107,18 +107,34 @@ def create_spacy_line(context, words,qid,insert_space=False):
     return line
 
 
-def create_ner_sentence(str, context,nlp, insert_last_space=True,char_space=' '):
+def create_ner_sentence(string:str, context:str,nlp, insert_last_space=True,char_space=' '):
+    """Creates one ner sentences in BIO format from a `string` and `context`. It search for `string` in the `context`.
+    
+    token by token.
+    word_context O
+    word_string B
+    word_string I
+    word_context O
 
-    # start = context.find(str)
-    # end = start + len(str)
-    # new_context = context
-    # if start == -1:
-    #     return []
+    :param string: [description]
+    :type string: str
+    :param context: [description]
+    :type context: str
+    :param nlp: Spacy model
+    :type nlp: [type]
+    :param insert_last_space: [description], defaults to True
+    :type insert_last_space: bool, optional
+    :param char_space: [description], defaults to ' '
+    :type char_space: str, optional
+    :return: [description]
+    :rtype: [type]
+    """
+ 
 
     lines = []
     temp_lines = []
 
-    tokens_str = [token.text for token in nlp(str)]
+    tokens_str = [token.text for token in nlp(string)]
     doc = nlp(context)
     sentence_tokens = [[token.text for token in sent] for sent in doc.sents]
     j=0
@@ -244,10 +260,13 @@ def create_ner_sentences_children(
                 name = preprocess(data['name'])
             else:
                 continue
+            #we insert the name of the entity as one single sentence
+            sentences.append(create_ner_sentence(
+                name, name, nlp, char_space))
 
             name_len = len(name)
             words_name = name.split(' ')
-            #Very long names shouldn't be search 
+            #Very long names shouldn't be searched 
             if len(words_name) > MAX_NUM_WORDS_ENTITY:
                 continue
             

@@ -23,8 +23,8 @@ import pickle
 import spacy
 from spacy.lang.en import English
 #%%
-#bert SUPPORT 512
-MAX_NUM_TOKEN_SEN = 500
+#bert SUPPORT 512, but bioBERT was finetuned with 128
+MAX_NUM_TOKEN_SEN = 128
 ONTO_PATH = config.ONTOLOGY_FILES_PATH
 ONTOLOGIES=config.WORKING_ONTOLOGIES
 # ONTOLOGIES=['go']
@@ -71,9 +71,12 @@ dataset = [train,train_dev,test,devel]
 for i,_sentences in enumerate(_dataset):
     for sentence in _sentences:
         if sentence[-2] != '. O':
-            sentence[-1] = '. O'
+            sentence[-2] = '. O'
+            sentence[-1] = ' '
         if len(sentence) > MAX_NUM_TOKEN_SEN:
-            dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN])
+            print('Sentence was truncated',sentence)
+            #TODO add [.  O]
+            dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN - 2] + ['. O',' '])
         else:
             dataset[i].extend(sentence)
 
