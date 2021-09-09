@@ -1,14 +1,14 @@
 # %%
 # debug
-%load_ext autoreload
-%autoreload 2
-from logging import debug
-from re import T
-import sys
+# %load_ext autoreload
+# %autoreload 2
+# from logging import debug
+# from re import T
+# import sys
 
-sys.path.append("..")
-import os
-import sys
+# sys.path.append("..")
+# import os
+# import sys
 
 # %%
 import config
@@ -27,7 +27,7 @@ from spacy.lang.en import English
 MAX_NUM_TOKEN_SEN = 128
 ONTO_PATH = config.ONTOLOGY_FILES_PATH
 ONTOLOGIES=config.WORKING_ONTOLOGIES
-ONTOLOGIES=['go']
+# ONTOLOGIES=['go']
 SAVING_DIR =os.path.join('data','ner_bert') 
 Path(SAVING_DIR).mkdir(parents=True, exist_ok=True)
 
@@ -39,12 +39,11 @@ DEVEL_FILE = os.path.join(SAVING_DIR,'devel.txt')
 # tokenizer = nlp.tokenizer
 # %%
 
-
 sentences = create_ner_sentences_children(
     ONTOLOGIES, 
     ONTO_PATH, 
     MAX_NUM_WORDS_ENTITY=5,
-    char_space=' ')
+    char_space='')
        
 
 #%% 
@@ -72,11 +71,12 @@ for i,_sentences in enumerate(_dataset):
     for sentence in _sentences:
         if sentence[-2] != '. O':
             sentence[-2] = '. O'
-            sentence[-1] = ' '
+            sentence[-1] = ''
+
         if len(sentence) > MAX_NUM_TOKEN_SEN:
-            print('Sentence was truncated',sentence)
+            # print('Sentence was truncated',sentence)
             #TODO add [.  O]
-            dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN - 2] + ['. O',' '])
+            dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN - 2] + ['. O',''])
         else:
             dataset[i].extend(sentence)
 
@@ -90,15 +90,3 @@ for i,jfile in enumerate(_files):
 
 handle.close()
 print("Finished saving to file")
-
-# %%
-nlp = English()
-nlp.add_pipe("sentencizer")
-
-# %%
-child_def = 'This is one damn sentence. This is other fockin sentence'
-def_sents = nlp(child_def)
-def_sents = [sen.text
-             for sen in list(def_sents.sents)]
-
-# %%

@@ -284,8 +284,7 @@ def create_ner_sentences_children(
                 if 'def' in child_data:
                     child_def = preprocess(child_data['def'])
                     #We extract sentences form the definition
-                    def_sents = nlp(child_def)
-                    def_sents = [sen.text for sen in list(def_sents.sents)]
+                    def_sents = text_to_sentences(child_def,nlp)
                     docs.extend(def_sents)
 
                 synonyms = get_synonyms_formatted(graph, child_data)
@@ -409,3 +408,11 @@ def get_clean_tokens(text,nlp):
     return text_tokens
 
 
+def text_to_sentences(text,nlp=None)->List[str]:
+    #Case from spacy sentecizer
+    if nlp is not None:
+        sents = nlp(text)
+        sents = [sen.text for sen in list(sents.sents)]
+        return sents
+    #fast split
+    return text.split('.')
