@@ -283,7 +283,10 @@ def create_ner_sentences_children(
 
                 if 'def' in child_data:
                     child_def = preprocess(child_data['def'])
-                    docs.append(child_def)
+                    #We extract sentences form the definition
+                    def_sents = nlp(child_def)
+                    def_sents = [sen.text for sen in list(def_sents.sents)]
+                    docs.extend(def_sents)
 
                 synonyms = get_synonyms_formatted(graph, child_data)
                 docs.extend(synonyms)
