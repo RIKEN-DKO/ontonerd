@@ -48,11 +48,17 @@ class EntityLinker:
         possible entities for each mention. 
         """
         text = preprocess(text)
-        print(text)
+        doc = self.nlp(text)
+        # print(text)
         text_tokens = get_clean_tokens(text,self.nlp)
-
-        mentions_ner = get_mentions_ner(text,self.ner_model,model_type='flair')
-
+        mentions_ner = text_tokens
+        #The text is divided into sentences and NER object search for mentions in each one
+        for sent in doc.sents:
+            print('Anlysing sentence:',sent.text)
+            mentions_sentence = get_mentions_ner(sent.text,self.ner_model,model_type='flair')
+            print('NER mentions:',mentions_sentence)
+            if len(mentions_sentence)>0:
+                mentions_ner.extend(mentions_sentence)
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
         mention2pem = self.mention2pem

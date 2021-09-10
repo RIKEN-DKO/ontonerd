@@ -162,8 +162,8 @@ def create_ner_sentence(string:str, context:str,nlp, insert_last_space=True,char
 
         if found_token:
             lines.extend(temp_lines)
-            if lines[-1] !='. O':
-                lines.append('. O')
+            # if lines[-1] !='. O':
+            #     lines.append('. O')
             if insert_last_space:
                 lines.append(char_space)
 
@@ -260,15 +260,17 @@ def create_ner_sentences_children(
                 name = preprocess(data['name'])
             else:
                 continue
+            words_name = name.split(' ')
+            #Very long names shouldn't be searched 
+            if len(words_name) > MAX_NUM_WORDS_ENTITY:
+                continue
+
+
             #we insert the name of the entity as one single sentence
             sentences.append(create_ner_sentence(
                 name, name, nlp, char_space))
 
             name_len = len(name)
-            words_name = name.split(' ')
-            #Very long names shouldn't be searched 
-            if len(words_name) > MAX_NUM_WORDS_ENTITY:
-                continue
             
             #TODO search for the synonyms names too... 
              
@@ -416,3 +418,13 @@ def text_to_sentences(text,nlp=None)->List[str]:
         return sents
     #fast split
     return text.split('.')
+
+
+def is_sentence_w_begin(sentence:List[str],b_label='B')->bool:
+    b_found= False
+    for word in sentence:
+        label = word.split(' ')[1]
+        if label == b_label:
+            b_found = True
+
+    return b_found

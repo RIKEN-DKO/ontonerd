@@ -15,7 +15,7 @@ import config
 import networkx as nx
 from pathlib import Path
 import obonet
-from utils import (create_ner_sentences_children)
+from utils import (create_ner_sentences_children,is_sentence_w_begin)
 import os
 import copy
 import random
@@ -67,16 +67,18 @@ _dataset = [_train, _train_dev, _test,_devel]
 train,train_dev,test,devel=[],[],[],[]
 dataset = [train,train_dev,test,devel]
 
+#Cleaning up and fixing bad sentences
 for i,_sentences in enumerate(_dataset):
     for sentence in _sentences:
-        if sentence[-2] != '. O':
-            sentence[-2] = '. O'
-            sentence[-1] = ''
-
+        #Some sentences contains no B
+        if not is_sentence_w_begin(sentence):
+            continue 
+        if sentence[-1] != '':
+            sentence.append('')
         if len(sentence) > MAX_NUM_TOKEN_SEN:
             # print('Sentence was truncated',sentence)
             #TODO add [.  O]
-            dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN - 2] + ['. O',''])
+            dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN - 1] + [''])
         else:
             dataset[i].extend(sentence)
 
@@ -90,3 +92,5 @@ for i,jfile in enumerate(_files):
 
 handle.close()
 print("Finished saving to file")
+
+# %%

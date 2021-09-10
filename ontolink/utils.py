@@ -1,5 +1,5 @@
 import re
-
+from termcolor import colored
 
 def cleanhtml(raw_html):
   cleanr = re.compile('<.*?>')
@@ -59,3 +59,36 @@ def merge_intervals(arr):
       merged_list.append(pop_element)
       merged_list.append(arr[i])
   return merged_list
+
+
+HIGHLIGHTS = [
+    "on_red",
+    "on_green",
+    "on_yellow",
+    "on_blue",
+    "on_magenta",
+    "on_cyan",
+]
+#From https://github.com/facebookresearch/BLINK/
+def _print_colorful_text(input_sentence, samples):
+    # init()  # colorful output
+    msg = ""
+    if samples and (len(samples) > 0):
+        msg += input_sentence[0: int(samples[0]["start_pos"])]
+        for idx, sample in enumerate(samples):
+            msg += colored(
+                input_sentence[int(sample["start_pos"]): int(sample["end_pos"])],
+                "grey",
+                HIGHLIGHTS[idx % len(HIGHLIGHTS)],
+            )
+            if idx < len(samples) - 1:
+                msg += input_sentence[
+                    int(sample["end_pos"]): int(samples[idx + 1]["start_pos"])
+                ]
+            else:
+                msg += input_sentence[int(sample["end_pos"]):]
+    else:
+        msg = input_sentence
+        print("Failed to identify entity from text:")
+    print("\n" + str(msg) + "\n")
+
