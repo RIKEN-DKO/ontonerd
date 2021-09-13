@@ -59,21 +59,22 @@ class QueryEntityRanking(EntityRanking):
         self.len_terms_collection = len(mention_freq)
 
     @abstractmethod
-    def get_interpretations(self, text_tokens: List[str], mentions: List[str]) -> Dict:
+    def get_interpretations(self, text_tokens: List[str], mentions: List[Dict]) -> List[Dict]:
 
 
-        entities_scores_mentions = {}
+        # entities_scores_mentions = {}
         for mention in mentions:
 
-            scored_entities = self.score_E_q_m(text_tokens, mention)
-            entities_scores_mentions[mention] = scored_entities
+            scored_entities = self.score_E_q_m(text_tokens, mention['text'])
+            # entities_scores_mentions[mention] = scored_entities
+            mention['entities'] = scored_entities
 
-
-        interpretations = self.gen_interpretations(entities_scores_mentions)
+        interpretations = self.gen_interpretations(mentions)
 
         return interpretations
+        # return mentions
 
-    def gen_interpretations(self, entities_scores_mentions: dict, method='max'):
+    def gen_interpretations(self, entities_scores_mentions: List[Dict], method='max'):
         """
         A dict with mention as keys, the values contains the top-k entities assigment and scores
         """
@@ -83,22 +84,23 @@ class QueryEntityRanking(EntityRanking):
 
         return self.get_max_interpretation(entities_scores_mentions)
 
-    def get_max_interpretation(self, entities_scores_mentions: dict, eps=1e-6):
+    def get_max_interpretation(self, entities_scores_mentions: List[Dict], eps=1e-6):
         """
         Generate an interpretation by selection the one with the biggest score
         """
         new_entities_scores_mentions = {}
-        for mention, entity_and_score in entities_scores_mentions.items():
+        for mention in entities_scores_mentions:
             #unzip the tuples of entities and scores
             #https://stackoverflow.com/questions/12974474/how-to-unzip-a-list-of-tuples-into-individual-lists
             # entities,scores = list(map(list, zip(*entity_and_score)))
             #The list comes in ascending scores, last is the max
+            entity_and_score = mention['entities']
             best_entity, score = list(entity_and_score)[-1]
 
             if score > eps:
-                new_entities_scores_mentions[mention] = (best_entity, score)
+                mention['best_entity'] = (best_entity, score)
 
-        return new_entities_scores_mentions
+        return entities_scores_mentions
   
     def score_E_q_m(self, text_tokens:List[str], mention:str):
         """ Score  in the question (q) given mention(m)   

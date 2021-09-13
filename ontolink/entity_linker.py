@@ -56,11 +56,11 @@ class EntityLinker:
         ner_mentions = [] #a list of dicts
 
         #The text is divided into sentences and NER object search for mentions in each one
-        #Neither spacy or nltk are give the correct boundaries,  theyr remove trailing spaces.
+        #Neither spacy or nltk are give the correct boundaries,  they remove trailing spaces.
         # split() for now 
         last_sen_size = 0
         for sent in text.split('.'):
-            print('Analysing sentence:',sent)
+            # print('Analysing sentence:',sent)
             ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(sent,self.ner_model,model_type='flair')
             if len(ner_mentions_sentence)>0:
                 for ment in ner_mentions_sentence:
@@ -69,13 +69,13 @@ class EntityLinker:
                 ner_mentions.extend(ner_mentions_sentence)
             #Last text lenght plus 1 for accounting the '.'
             last_sen_size += len(sent) + 1 
-            print('NER mentions:',ner_mentions)
+            # print('NER mentions:',ner_mentions)
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
         #TODO find text_tokens positions in text
         clean_text_tokens = get_clean_tokens(text,self.nlp)
         tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
-        print('token mentions',tokendict_mentions)
+        # print('token mentions',tokendict_mentions)
         #combine the mentions found by the NER system and the ones found by
         #tokenization and dict searching. 
         mentions = ner_mentions + tokendict_mentions
@@ -83,12 +83,12 @@ class EntityLinker:
         mentions = [dict(s) for s in set(frozenset(d.items())
                                         for d in mentions)]
 
-        print("Analizing mentions:")
-        _print_colorful_text(text,mentions)
+        # print("Analizing mentions:")
+        # _print_colorful_text(text,mentions)
         #Score entities for each mention
 
-        # return self.ranking_strategy.get_interpretations(clean_text_tokens,mentions)
-        return mentions
+        interpretations = self.ranking_strategy.get_interpretations(clean_text_tokens,mentions)
+        return interpretations
 
     def get_mentions_by_tokens_and_dict(self, text:str)->Dict:
         #tokenize and check if mentions exist in the mention dictionary
