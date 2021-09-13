@@ -71,16 +71,20 @@ dataset = [train,train_dev,test,devel]
 for i,_sentences in enumerate(_dataset):
     for sentence in _sentences:
         #Some sentences contains no B
+
         if not is_sentence_w_begin(sentence):
             continue 
-        if sentence[-1] != '':
-            sentence.append('')
+        if sentence[-1] != '. O':
+                sentence.append('. O')
+        sentence.append('')
+        
         if len(sentence) > MAX_NUM_TOKEN_SEN:
             # print('Sentence was truncated',sentence)
             #TODO add [.  O]
             dataset[i].extend(sentence[:MAX_NUM_TOKEN_SEN - 1] + [''])
         else:
             dataset[i].extend(sentence)
+        
 
 #%%
 print("Saving to file...")

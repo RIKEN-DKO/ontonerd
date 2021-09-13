@@ -107,7 +107,7 @@ def create_spacy_line(context, words,qid,insert_space=False):
     return line
 
 
-def create_ner_sentence(string:str, context:str,nlp, insert_last_space=True,char_space=' '):
+def create_ner_sentence(string:str, context:str,nlp, insert_last_space=False,char_space=' '):
     """Creates one ner sentences in BIO format from a `string` and `context`. It search for `string` in the `context`.
     
     token by token.
@@ -262,7 +262,7 @@ def create_ner_sentences_children(
                 continue
             words_name = name.split(' ')
             #Very long names shouldn't be searched 
-            if len(words_name) > MAX_NUM_WORDS_ENTITY:
+            if len(name) > 70:
                 continue
 
 

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List,Dict
 
 
 from dataset_creation.utils import get_clean_tokens,preprocess
@@ -8,7 +8,7 @@ from flair.data import Sentence
 import time
 import numpy as np
 from entity_ranking import EntityRanking
-
+from utils import _print_colorful_text
 class EntityLinker:
     """
     TODO add doc
@@ -47,29 +47,67 @@ class EntityLinker:
         Process the query, find mentions and for each mention show the top-k 
         possible entities for each mention. 
         """
-        text = preprocess(text)
-        doc = self.nlp(text)
-        # print(text)
-        text_tokens = get_clean_tokens(text,self.nlp)
-        mentions_ner = text_tokens
+        # _text = preprocess(text)
+        # doc = self.nlp(text)
+
+
+        # [{'end_pos': 12, 'start_pos': 2, 'text': 'quaternary'},
+        #  {'start_pos': 13, 'end_pos': 21, 'text': 'ammonium'}]
+        ner_mentions = [] #a list of dicts
+
         #The text is divided into sentences and NER object search for mentions in each one
-        for sent in doc.sents:
-            print('Anlysing sentence:',sent.text)
-            mentions_sentence = get_mentions_ner(sent.text,self.ner_model,model_type='flair')
-            print('NER mentions:',mentions_sentence)
-            if len(mentions_sentence)>0:
-                mentions_ner.extend(mentions_sentence)
+        #Neither spacy or nltk are give the correct boundaries,  theyr remove trailing spaces.
+        # split() for now 
+        last_sen_size = 0
+        for sent in text.split('.'):
+            print('Analysing sentence:',sent)
+            ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(sent,self.ner_model,model_type='flair')
+            if len(ner_mentions_sentence)>0:
+                for ment in ner_mentions_sentence:
+                    ment['start_pos']+=last_sen_size
+                    ment['end_pos']+=last_sen_size
+                ner_mentions.extend(ner_mentions_sentence)
+            #Last text lenght plus 1 for accounting the '.'
+            last_sen_size += len(sent) + 1 
+            print('NER mentions:',ner_mentions)
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
-        mention2pem = self.mention2pem
-        mentions = [m for m in mentions_ner if m in mention2pem]
-        
-        print("Analizing mentions:",mentions)
+        #TODO find text_tokens positions in text
+        clean_text_tokens = get_clean_tokens(text,self.nlp)
+        tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
+        print('token mentions',tokendict_mentions)
+        #combine the mentions found by the NER system and the ones found by
+        #tokenization and dict searching. 
+        mentions = ner_mentions + tokendict_mentions
+        #Also delete repetitions: https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
+        mentions = [dict(s) for s in set(frozenset(d.items())
+                                        for d in mentions)]
+
+        print("Analizing mentions:")
+        _print_colorful_text(text,mentions)
         #Score entities for each mention
 
-        return self.ranking_strategy.get_interpretations(text_tokens,mentions)
+        # return self.ranking_strategy.get_interpretations(clean_text_tokens,mentions)
+        return mentions
+
+    def get_mentions_by_tokens_and_dict(self, text:str)->Dict:
+        #tokenize and check if mentions exist in the mention dictionary
+        nlp = self.nlp
+        text_tokens = []
+        doc = nlp(text)
+        all_stopwords = nlp.Defaults.stop_words
+        for token in doc:
+            if ((not token.is_punct) 
+            and (token.text not in all_stopwords)
+            and (token.text in self.mention2pem)):
+                text_tokens.append({
+                    'text': token.text,
+                    'start_pos': token.idx,
+                    'end_pos': token.idx+len(token.text),
+                })
         
-        # return entities_scores_mentions
+        return text_tokens
+
 
 
 def get_mentions_ner(text:str,nlp,model_type='flair') -> List[str]:
@@ -84,14 +122,30 @@ def get_mentions_flair(text,nlp):
     nlp.predict(sentence)
 
     mentions = []
+    start_poss=[]
+    end_poss = []
+
     last_end = -3
     i = 0
     for entity in sentence.to_dict(tag_type='ner')['entities']:
+        #combine
         if (last_end+1) == entity['start_pos']:
             mentions[i-1] += ' ' + entity['text']
+            end_poss[i-1] = entity['end_pos']
         else:
             mentions.append(entity['text'])
             i += 1
+            start_poss.append(entity['start_pos'])
+            end_poss.append(entity['end_pos'])
         last_end = entity['end_pos']
 
-    return mentions
+    #Pack all ina dict
+    results = []
+    for i,mention in enumerate(mentions): 
+        results.append({
+            'text':mention,
+            'start_pos':start_poss[i],
+            'end_pos':end_poss[i],
+        })
+
+    return mentions,results
