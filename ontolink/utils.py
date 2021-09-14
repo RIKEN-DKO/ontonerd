@@ -133,3 +133,21 @@ def log(*args):
     if DEBUG:
         print(args)
       
+
+def merge_intervals(arr):
+  if len(arr) < 1:
+    return []
+  #sort the intervals by its first value
+  arr.sort(key=lambda x: x[0])
+
+  merged_list = []
+  merged_list.append(arr[0])
+  for i in range(1, len(arr)):
+    pop_element = merged_list.pop()
+    if is_overlaping(pop_element, arr[i]):
+      new_element = pop_element[0], max(pop_element[1], arr[i][1])
+      merged_list.append(new_element)
+    else:
+      merged_list.append(pop_element)
+      merged_list.append(arr[i])
+  return merged_list

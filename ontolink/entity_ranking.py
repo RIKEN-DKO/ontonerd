@@ -95,13 +95,13 @@ class QueryEntityRanking(EntityRanking):
         eps = self.min_score_for_be_ranked
         new_entities_scores_mentions = {}
         for mention in entities_scores_mentions:
-            log(mention)
+            # log(mention)
 
             entity_and_score = mention['entities']
-            log(entity_and_score)
+            # log(entity_and_score)
             sorted_by_second = sorted(
                 entity_and_score, key=itemgetter(1), reverse=True)
-            log(sorted_by_second)
+            # log(sorted_by_second)
             best_entity, score = sorted_by_second[0]
             # best_entity, score = list(entity_and_score.sort(key=lambda x: x[1]))[0]
 

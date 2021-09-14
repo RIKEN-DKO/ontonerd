@@ -79,13 +79,13 @@ class EntityLinker:
                         ner_mentions.append(ment)
             #Last text lenght plus 1 for accounting the '.'
             last_sen_size += len(sent) + 1 
-            log('NER mentions:',ner_mentions)
+            # log('NER mentions:',ner_mentions)
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
         #TODO find text_tokens positions in text
         clean_text_tokens = get_clean_tokens(text,self.nlp)
         tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
-        log('token mentions',tokendict_mentions)
+        # log('token mentions',tokendict_mentions)
         #combine the mentions found by the NER system and the ones found by
         #tokenization and dict searching. 
         mentions = ner_mentions + tokendict_mentions
@@ -137,24 +137,25 @@ class EntityLinker:
         """
         new_interpretations=[]
         overlapping_indices=[]
+        interpretations.sort(key=lambda x: x['start_pos'])
         for i in range(0,len(interpretations)):
             if i in overlapping_indices:
                 continue
             best_interp = interpretations[i]
-            # print(overlapping_indices)
-            # print(i, 'best', best_interp['text'], best_interp['best_entity'])
+            log(overlapping_indices)
+            log(i, 'best', best_interp['text'], best_interp['best_entity'])
             for j in range(i+1,len(interpretations)):
 
                 other_interp = interpretations[j]
-                # print(j, 'other', other_interp['text'], other_interp['best_entity'])
-                # print(i,j,best_interp)
+                log(j, 'other', other_interp['text'], other_interp['best_entity'])
                 best_interval = [best_interp['start_pos'],best_interp['end_pos']]
                 other_interval = [other_interp['start_pos'],other_interp['end_pos']]
 
                 #Is overlapping
                 if is_overlaping(best_interval,other_interval) and j not in overlapping_indices:
-                    # print('overlap!')
+                    log('overlap!')
                     overlapping_indices.append(j)
+                    overlapping_indices.append(i)
                     #comparing scores
                     if method =='best_score':             
                         if best_interp['best_entity'][1] < other_interp['best_entity'][1]:
@@ -170,6 +171,38 @@ class EntityLinker:
             new_interpretations.append(best_interp)
         
         return new_interpretations
+
+# def prune_overlapping_entities2(self, interpretations: List[Dict], method='best_score') -> List[Dict]:
+#     if len(interpretations) < 1:
+#         return interpretations
+#     #sort the intervals by its first value
+#     interpretations.sort(key=lambda x: x['start_pos'])
+
+#     merged_list = []
+#     merged_list.append(interpretations[0])
+#     for i in range(1, len(interpretations)):
+#         pop_element = merged_list.pop()
+
+#         pop_interval = [pop_element['start_pos'], pop_element['end_pos']]
+#         other_interval = [interpretations[i]['start_pos'],
+#                           interpretations[i]['end_pos']]
+
+#         if is_overlaping(pop_element['start_pos'], other_interval):
+
+#             # new_element = pop_element[0], max(pop_element[1], interpretations[i][1])
+#             if method == 'best_score':
+#                 if best_interp['best_entity'][1] < other_interp['best_entity'][1]:
+#                     best_interp = other_interp
+#             elif method == 'large_text':
+#                 if len(best_interp['text']) < len(other_interp['text']):
+#                     best_interp = other_interp
+#             else:
+#                 raise('Unknow method')
+#             merged_list.append(new_element)
+#         else:
+#             merged_list.append(pop_element)
+#             merged_list.append(interpretations[i])
+#     return merged_list
 
 
 def get_mentions_ner(text:str,nlp,model_type='flair') -> List[str]:
