@@ -1,5 +1,6 @@
 import re
 from termcolor import colored
+from typing import List
 
 def cleanhtml(raw_html):
   cleanr = re.compile('<.*?>')
@@ -69,21 +70,30 @@ HIGHLIGHTS = [
     "on_magenta",
     "on_cyan",
 ]
-#From https://github.com/facebookresearch/BLINK/
+#From https://github.com/facebookresearch/BLINK/ with some modifications
 def _print_colorful_text(input_sentence, samples):
+    """
+    pred_triples:
+        Assumes no overlapping triples
+    """
+
+
+    sort_idxs = sorted(range(len(samples)),
+                   key=lambda idx: samples[idx]['start_pos'])
     # init()  # colorful output
     msg = ""
     if samples and (len(samples) > 0):
-        msg += input_sentence[0: int(samples[0]["start_pos"])]
-        for idx, sample in enumerate(samples):
+        msg += input_sentence[0: int(samples[sort_idxs[0]]["start_pos"])]
+        for i,idx in enumerate(sort_idxs):
+            sample = samples[idx]
             msg += colored(
                 input_sentence[int(sample["start_pos"]): int(sample["end_pos"])],
                 "grey",
-                HIGHLIGHTS[idx % len(HIGHLIGHTS)],
+                HIGHLIGHTS[i % len(HIGHLIGHTS)],
             )
-            if idx < len(samples) - 1:
+            if i < len(samples) - 1:
                 msg += input_sentence[
-                    int(sample["end_pos"]): int(samples[idx + 1]["start_pos"])
+                    int(sample["end_pos"]): int(samples[sort_idxs[i + 1]]["start_pos"])
                 ]
             else:
                 msg += input_sentence[int(sample["end_pos"]):]
@@ -92,3 +102,25 @@ def _print_colorful_text(input_sentence, samples):
         print("Failed to identify entity from text:")
     print("\n" + str(msg) + "\n")
 
+
+def is_overlaping(a:List[int], b:List[int]):
+  """Check if the two interval `a` and `b` are overlapping
+
+  :param a: [description]
+  :type a: List[int]
+  :param b: [description]
+  :type b: List[int]
+  :return: [description]
+  :rtype: [type]
+  """
+  return overlaps(a,b) > 0
+
+#https://stackoverflow.com/questions/2953967/built-in-function-for-computing-overlap-in-python
+def overlaps(a, b):
+    """
+    Return the amount of overlap, between a and b.
+    If >0, the amount overlap
+    If 0,  their limits touch.
+    If <0, distance"""
+    
+    return min(a[1], b[1]) - max(a[0], b[0])

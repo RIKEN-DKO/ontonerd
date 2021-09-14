@@ -8,7 +8,9 @@ from flair.data import Sentence
 import time
 import numpy as np
 from entity_ranking import EntityRanking
-from utils import _print_colorful_text
+from utils import _print_colorful_text,is_overlaping
+import pprint
+
 class EntityLinker:
     """
     TODO add doc
@@ -61,6 +63,8 @@ class EntityLinker:
         last_sen_size = 0
         for sent in text.split('.'):
             # print('Analysing sentence:',sent)
+            if sent == '': #text ending with '.', give empty sentence 
+                continue
             ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(sent,self.ner_model,model_type='flair')
             if len(ner_mentions_sentence)>0:
                 for ment in ner_mentions_sentence:
@@ -88,8 +92,10 @@ class EntityLinker:
         #Score entities for each mention
 
         interpretations = self.ranking_strategy.get_interpretations(clean_text_tokens,mentions)
-        return interpretations
-
+        # pprint.pprint(interpretations)
+        # return interpretations
+        return self.prune_overlapping_entities(interpretations)
+    
     def get_mentions_by_tokens_and_dict(self, text:str)->Dict:
         #tokenize and check if mentions exist in the mention dictionary
         nlp = self.nlp
@@ -107,7 +113,37 @@ class EntityLinker:
                 })
         
         return text_tokens
+    
+    def prune_overlapping_entities(self,interpretations:List[Dict])->List[Dict]:
 
+        new_interpretations=[]
+        overlapping_indices=[]
+        for i in range(0,len(interpretations)):
+            if i in overlapping_indices:
+                continue
+            best_interp = interpretations[i]
+            # print(overlapping_indices)
+            # print(i, 'best', best_interp['text'], best_interp['best_entity'])
+            for j in range(i+1,len(interpretations)):
+
+                other_interp = interpretations[j]
+                # print(j, 'other', other_interp['text'], other_interp['best_entity'])
+                # print(i,j,best_interp)
+                best_interval = [best_interp['start_pos'],best_interp['end_pos']]
+                other_interval = [other_interp['start_pos'],other_interp['end_pos']]
+
+                #Is overlapping
+                if is_overlaping(best_interval,other_interval) and j not in overlapping_indices:
+                    # print('overlap!')
+                    overlapping_indices.append(j)
+                    #comparing scores             
+                    if best_interp['best_entity'][1] < other_interp['best_entity'][1]:
+                        best_interp = other_interp
+
+
+            new_interpretations.append(best_interp)
+        
+        return new_interpretations
 
 
 def get_mentions_ner(text:str,nlp,model_type='flair') -> List[str]:
