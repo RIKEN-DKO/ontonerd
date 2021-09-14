@@ -8,7 +8,7 @@ from flair.data import Sentence
 import time
 import numpy as np
 from entity_ranking import EntityRanking
-from utils import _print_colorful_text,is_overlaping
+from utils import (_print_colorful_text,is_overlaping,log)
 import pprint
 
 class EntityLinker:
@@ -62,9 +62,9 @@ class EntityLinker:
         # split() for now 
         last_sen_size = 0
         for sent in text.split('.'):
-            # print('Analysing sentence:',sent)
             if sent == '': #text ending with '.', give empty sentence 
                 continue
+            log('Analysing sentence:',sent)
             ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(sent,self.ner_model,model_type='flair')
             if len(ner_mentions_sentence)>0:
                 for ment in ner_mentions_sentence:
@@ -73,13 +73,13 @@ class EntityLinker:
                 ner_mentions.extend(ner_mentions_sentence)
             #Last text lenght plus 1 for accounting the '.'
             last_sen_size += len(sent) + 1 
-            # print('NER mentions:',ner_mentions)
+            log('NER mentions:',ner_mentions)
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
         #TODO find text_tokens positions in text
         clean_text_tokens = get_clean_tokens(text,self.nlp)
         tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
-        # print('token mentions',tokendict_mentions)
+        log('token mentions',tokendict_mentions)
         #combine the mentions found by the NER system and the ones found by
         #tokenization and dict searching. 
         mentions = ner_mentions + tokendict_mentions
@@ -87,12 +87,13 @@ class EntityLinker:
         mentions = [dict(s) for s in set(frozenset(d.items())
                                         for d in mentions)]
 
-        # print("Analizing mentions:")
+        log("Analizing mentions:")
         # _print_colorful_text(text,mentions)
         #Score entities for each mention
 
         interpretations = self.ranking_strategy.get_interpretations(clean_text_tokens,mentions)
-        # pprint.pprint(interpretations)
+
+        # log(interpretations)
         # return interpretations
         return self.prune_overlapping_entities(interpretations)
     

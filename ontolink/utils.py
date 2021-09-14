@@ -124,3 +124,12 @@ def overlaps(a, b):
     If <0, distance"""
     
     return min(a[1], b[1]) - max(a[0], b[0])
+
+
+DEBUG = True
+
+
+def log(*args):
+    if DEBUG:
+        print(args)
+      

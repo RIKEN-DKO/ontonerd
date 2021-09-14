@@ -3,6 +3,7 @@ from abc import abstractmethod
 from typing import Dict, List
 import operator
 from nltk.probability import FreqDist
+from utils import log
 
 class EntityRanking:
     """Manage how we will rank the entities
@@ -49,10 +50,12 @@ class QueryEntityRanking(EntityRanking):
     def __init__(self,
                  entity2description,
                  mention_freq,
-                 mention2pem: Dict) -> None:
+                 mention2pem: Dict,
+                 min_score_for_be_ranked=1e-6,  # entity with score too small should be ignored
+                 ) -> None:
 
         super().__init__()
-
+        self.min_score_for_be_ranked = min_score_for_be_ranked
         self.mention2pem = mention2pem
         self.entity2description = entity2description
         self.mention_freq = mention_freq
@@ -84,18 +87,21 @@ class QueryEntityRanking(EntityRanking):
 
         return self.get_max_interpretation(entities_scores_mentions)
 
-    def get_max_interpretation(self, entities_scores_mentions: List[Dict], eps=1e-6):
+    def get_max_interpretation(self, entities_scores_mentions: List[Dict]):
         """
         Generate an interpretation by selection the one with the biggest score
         """
+        eps = self.min_score_for_be_ranked
         new_entities_scores_mentions = {}
         for mention in entities_scores_mentions:
-            #unzip the tuples of entities and scores
-            #https://stackoverflow.com/questions/12974474/how-to-unzip-a-list-of-tuples-into-individual-lists
-            # entities,scores = list(map(list, zip(*entity_and_score)))
-            #The list comes in ascending scores, last is the max
+            log(mention)
+
             entity_and_score = mention['entities']
-            best_entity, score = list(entity_and_score)[-1]
+            log(entity_and_score)
+            sorted_by_second=sorted(entity_and_score, key=lambda tup: tup[1],reverse=True)
+            log(sorted_by_second)
+            best_entity, score = sorted_by_second[0]
+            # best_entity, score = list(entity_and_score.sort(key=lambda x: x[1]))[0]
 
             if score > eps:
                 mention['best_entity'] = (best_entity, score)
