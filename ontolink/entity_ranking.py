@@ -4,6 +4,7 @@ from typing import Dict, List
 import operator
 from nltk.probability import FreqDist
 from utils import log
+from operator import itemgetter
 
 class EntityRanking:
     """Manage how we will rank the entities
@@ -98,7 +99,8 @@ class QueryEntityRanking(EntityRanking):
 
             entity_and_score = mention['entities']
             log(entity_and_score)
-            sorted_by_second=sorted(entity_and_score, key=lambda tup: tup[1],reverse=True)
+            sorted_by_second = sorted(
+                entity_and_score, key=itemgetter(1), reverse=True)
             log(sorted_by_second)
             best_entity, score = sorted_by_second[0]
             # best_entity, score = list(entity_and_score.sort(key=lambda x: x[1]))[0]
