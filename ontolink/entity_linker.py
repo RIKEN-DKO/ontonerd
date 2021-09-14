@@ -16,13 +16,14 @@ class EntityLinker:
     TODO add doc
     """
     def __init__(self, 
-    mention2pem, 
-    # entity2description, 
-    # mention_freq,
-    # collection_size_terms,
-    ranking_strategy: EntityRanking,
-    ner_model=None,
-    ner_model_type='flair'):
+                mention2pem, 
+                # entity2description, 
+                # mention_freq,
+                # collection_size_terms,
+                ranking_strategy: EntityRanking,
+                ner_model=None,
+                ner_model_type='flair',
+                prune_overlapping_method='best_score'):
 
         self.mention2pem = mention2pem
         # self.entity2description = entity2description
@@ -36,6 +37,7 @@ class EntityLinker:
         #TODO maybe strategy pattern is better here
         self.nlp = English()
         self.nlp.add_pipe("sentencizer")
+        self.prune_overlapping_method = prune_overlapping_method
 
         
         self.ner_model = ner_model
@@ -99,7 +101,7 @@ class EntityLinker:
 
         # log(interpretations)
         # return interpretations
-        return self.prune_overlapping_entities(interpretations)
+        return self.prune_overlapping_entities(interpretations,method= self.prune_overlapping_method)
     
     def get_mentions_by_tokens_and_dict(self, text:str)->Dict:
         #tokenize and check if mentions exist in the mention dictionary
@@ -119,8 +121,20 @@ class EntityLinker:
         
         return text_tokens
     
-    def prune_overlapping_entities(self,interpretations:List[Dict])->List[Dict]:
+    def prune_overlapping_entities(self,interpretations:List[Dict],method='best_score')->List[Dict]:
+        """Detect overlapping entities by it position in text. 
 
+
+        :param interpretations: [description]
+        :type interpretations: List[Dict]
+        :param method:
+        Methods:
+            'best_score' choose only the entity with best score over two overlapping text.
+            'large_text' choose only the entity with large text score over two overlapping text.
+        :type method: str, optional
+        :return: [description]
+        :rtype: List[Dict]
+        """
         new_interpretations=[]
         overlapping_indices=[]
         for i in range(0,len(interpretations)):
@@ -141,9 +155,10 @@ class EntityLinker:
                 if is_overlaping(best_interval,other_interval) and j not in overlapping_indices:
                     # print('overlap!')
                     overlapping_indices.append(j)
-                    #comparing scores             
-                    if best_interp['best_entity'][1] < other_interp['best_entity'][1]:
-                        best_interp = other_interp
+                    #comparing scores
+                    if method =='best_score':             
+                        if best_interp['best_entity'][1] < other_interp['best_entity'][1]:
+                            best_interp = other_interp
 
 
             new_interpretations.append(best_interp)
