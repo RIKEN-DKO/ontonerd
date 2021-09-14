@@ -68,9 +68,13 @@ class EntityLinker:
             ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(sent,self.ner_model,model_type='flair')
             if len(ner_mentions_sentence)>0:
                 for ment in ner_mentions_sentence:
+
                     ment['start_pos']+=last_sen_size
                     ment['end_pos']+=last_sen_size
-                ner_mentions.extend(ner_mentions_sentence)
+
+                #Skip mentions not in dictionary
+                    if ment['text'] in self.mention2pem:
+                        ner_mentions.append(ment)
             #Last text lenght plus 1 for accounting the '.'
             last_sen_size += len(sent) + 1 
             log('NER mentions:',ner_mentions)

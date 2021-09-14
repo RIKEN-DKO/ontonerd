@@ -126,7 +126,7 @@ def overlaps(a, b):
     return min(a[1], b[1]) - max(a[0], b[0])
 
 
-DEBUG = True
+DEBUG = False
 
 
 def log(*args):
