@@ -159,6 +159,12 @@ class EntityLinker:
                     if method =='best_score':             
                         if best_interp['best_entity'][1] < other_interp['best_entity'][1]:
                             best_interp = other_interp
+                    elif method =='large_text':
+                        if len(best_interp['text']) < len(other_interp['text']):
+                            best_interp = other_interp
+                    else:
+                        raise('Unknow method')
+                        
 
 
             new_interpretations.append(best_interp)
