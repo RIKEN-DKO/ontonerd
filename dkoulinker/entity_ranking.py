@@ -3,7 +3,7 @@ from abc import abstractmethod
 from typing import Dict, List
 import operator
 from nltk.probability import FreqDist
-from utils import log
+from dkoulinker.utils import log
 from operator import itemgetter
 
 class EntityRanking:

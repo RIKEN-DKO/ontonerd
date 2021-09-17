@@ -1,14 +1,14 @@
 from typing import List,Dict
 
 
-from dataset_creation.utils import get_clean_tokens,preprocess
+from dkoulinker.dataset_creation.utils import get_clean_tokens, preprocess
 from nltk.corpus import stopwords
 from spacy.lang.en import English
 from flair.data import Sentence
 import time
 import numpy as np
-from entity_ranking import EntityRanking
-from utils import (_print_colorful_text,is_overlaping,log)
+from dkoulinker.entity_ranking import EntityRanking
+from dkoulinker.utils import (_print_colorful_text, is_overlaping, log)
 import pprint
 
 class EntityLinker:
