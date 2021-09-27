@@ -103,6 +103,46 @@ def _print_colorful_text(input_sentence, samples):
     print("\n" + str(msg) + "\n")
 
 
+def create_html_entities(input_sentence, samples):
+  """
+  Rende the html code for presenting the found entities in html or streamlit. Same purpose than
+  _print_colorful_text but for html
+  """
+    sort_idxs = sorted(range(len(samples)),
+                       key=lambda idx: samples[idx]['start_pos'])
+    # init()  # colorful output
+    ent_html = """<mark class="entity" style="background: #aa9cfc; padding: 0.45em 0.6em; margin: 0 0.25em; line-height: 1; border-radius: 0.35em;">{ent_name} <span style="font-size: 0.8em; font-weight: bold; line-height: 1; border-radius: 0.35em; vertical-align: middle; margin-left: 0.5rem">{ent_label}</span> </mark>
+    """
+
+    msg = """<div class="entities" style="line-height: 2.5 direction: ltr">"""
+    
+    if samples and (len(samples) > 0):
+        msg += input_sentence[0: int(samples[sort_idxs[0]]["start_pos"])]
+        for i, idx in enumerate(sort_idxs):
+            sample = samples[idx]
+            # msg += colored(
+            #     input_sentence[int(sample["start_pos"])
+            #                        : int(sample["end_pos"])],
+            #     "grey",
+            #     HIGHLIGHTS[i % len(HIGHLIGHTS)],
+            # )
+            msg += ent_html.format(ent_name=input_sentence[int(sample["start_pos"]):int(sample["end_pos"])],
+                                  ent_label='BIO')
+            # msg += '</mark>'
+            if i < len(samples) - 1:
+                msg += input_sentence[
+                    int(sample["end_pos"]): int(samples[sort_idxs[i + 1]]["start_pos"])
+                ]
+            else:
+                msg += input_sentence[int(sample["end_pos"]):]
+    else:
+        msg = input_sentence
+        print("Failed to identify entity from text:")
+    
+    msg += '</div>'
+    return msg
+
+
 def is_overlaping(a:List[int], b:List[int]):
   """Check if the two interval `a` and `b` are overlapping
 
