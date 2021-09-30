@@ -49,14 +49,17 @@ class EntityLinker:
     def link_entities(self,text,use_ner=True):
         """
         Process the query, find mentions and for each mention show the top-k 
-        possible entities for each mention. 
+        eg.
+        
+        # [{'end_pos': 12, 'start_pos': 2, 'text': 'quaternary'},
+        #  {'start_pos': 13, 'end_pos': 21, 'text': 'ammonium'}]
+
         """
         # _text = preprocess(text)
         # doc = self.nlp(text)
 
 
-        # [{'end_pos': 12, 'start_pos': 2, 'text': 'quaternary'},
-        #  {'start_pos': 13, 'end_pos': 21, 'text': 'ammonium'}]
+
         ner_mentions = [] #a list of dicts
 
         #The text is divided into sentences and NER object search for mentions in each one

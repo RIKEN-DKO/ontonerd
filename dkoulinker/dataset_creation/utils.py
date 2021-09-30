@@ -305,7 +305,9 @@ def create_ner_sentences_children(
     return sentences
 
 def create_pem_dictionary(ONTOLOGIES: List[str], ONTO_PATH: str):
-
+    """
+    Returns a dictionary a['mention'] ->  {'entityID1': p(e|m),'entityID2': p(e|m)} 
+    """
     pem={}
     mention_freq = {}
     for ontology in ONTOLOGIES:
