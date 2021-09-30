@@ -104,10 +104,11 @@ def _print_colorful_text(input_sentence, samples):
 
 
 def create_html_entities(input_sentence, samples):
-  """
-  Rende the html code for presenting the found entities in html or streamlit. Same purpose than
-  _print_colorful_text but for html
-  """
+    """
+    Rende the html code for presenting the found entities in html or streamlit. Same purpose than
+    _print_colorful_text but for html
+    """
+
     sort_idxs = sorted(range(len(samples)),
                        key=lambda idx: samples[idx]['start_pos'])
     # init()  # colorful output
@@ -120,15 +121,10 @@ def create_html_entities(input_sentence, samples):
         msg += input_sentence[0: int(samples[sort_idxs[0]]["start_pos"])]
         for i, idx in enumerate(sort_idxs):
             sample = samples[idx]
-            # msg += colored(
-            #     input_sentence[int(sample["start_pos"])
-            #                        : int(sample["end_pos"])],
-            #     "grey",
-            #     HIGHLIGHTS[i % len(HIGHLIGHTS)],
-            # )
+            label = sample['best_entity'][0]
             msg += ent_html.format(ent_name=input_sentence[int(sample["start_pos"]):int(sample["end_pos"])],
-                                  ent_label='BIO')
-            # msg += '</mark>'
+                                  ent_label=label)
+
             if i < len(samples) - 1:
                 msg += input_sentence[
                     int(sample["end_pos"]): int(samples[sort_idxs[i + 1]]["start_pos"])
