@@ -12,11 +12,34 @@ from dkoulinker.utils import (_print_colorful_text, is_overlaping, log)
 import pprint
 
 class EntityLinker:
-    """
-    TODO add doc
+    """ The entity linker, takes text and returns parts of the text
+        that could be liked to an entity id. 
+
+
+        :param mention2pem: A dictionary that contains the commoness P(e|m) ,where e is
+        the entity and m the mention. It should have format:
+
+        a['mention']:{'entityID1': p(e|m),'entityID2': p(e|m)} 
+        a['reproduction']:{'GO:0000003': 1.0} 
+
+        :type mention2pem: Dict
+        :param ranking_strategy: [description]
+        :type ranking_strategy: EntityRanking
+        :param ner_model: [description], defaults to None
+
+        :type ner_model: [type], Flair model:'flair', or 
+        'bert_transformers_pipeline' for bert transformers pipeline. 
+        Example:: 
+            ner_pipeline = pipeline('ner', model=output_dir, tokenizer=output_dir,ignore_labels=['O'],
+            grouped_entities=True,ignore_subwords=True)
+
+        :param ner_model_type: [description], defaults to 'flair'
+        :type ner_model_type: str, optional
+        :param prune_overlapping_method: [description], defaults to 'best_score'
+        :type prune_overlapping_method: str, optional
     """
     def __init__(self, 
-                mention2pem, 
+                mention2pem:Dict, 
                 # entity2description, 
                 # mention_freq,
                 # collection_size_terms,
