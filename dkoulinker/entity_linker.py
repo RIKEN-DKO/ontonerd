@@ -38,7 +38,7 @@ class EntityLinker:
         self.nlp = English()
         self.nlp.add_pipe("sentencizer")
         self.prune_overlapping_method = prune_overlapping_method
-
+        self.ner_model_type = ner_model_type
         
         self.ner_model = ner_model
         # ncpu = cpu_count()
@@ -49,10 +49,18 @@ class EntityLinker:
     def link_entities(self,text,use_ner=True):
         """
         Process the query, find mentions and for each mention show the top-k 
-        eg.
+        example return:
         
-        # [{'end_pos': 12, 'start_pos': 2, 'text': 'quaternary'},
-        #  {'start_pos': 13, 'end_pos': 21, 'text': 'ammonium'}]
+        [{'text': 'ammonium salt',
+        'end_pos': 24,
+        'start_pos': 11,
+        'entities': [('CHEBI:47704', 35.25677820125997)],
+        'best_entity': ('CHEBI:47704', 35.25677820125997)},
+        {'text': 'reproduction',
+        'end_pos': 68,
+        'start_pos': 56,
+        'entities': [('GO:0000003', 5.114009083705022)],
+        'best_entity': ('GO:0000003', 5.114009083705022)}]
 
         """
         # _text = preprocess(text)
@@ -70,7 +78,11 @@ class EntityLinker:
             if sent == '': #text ending with '.', give empty sentence 
                 continue
             log('Analysing sentence:',sent)
-            ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(sent,self.ner_model,model_type='flair')
+            ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(
+                sent,
+                self.ner_model,
+                model_type=self.ner_model_type)
+
             if len(ner_mentions_sentence)>0:
                 for ment in ner_mentions_sentence:
 
@@ -212,7 +224,46 @@ def get_mentions_ner(text:str,nlp,model_type='flair') -> List[str]:
 
     if model_type=='flair':
         return get_mentions_flair(text,nlp)
+
+    elif model_type == 'bert_transformers_pipeline':
+        return get_mentions_bert_transformers_pipeline(text, nlp)
         
+
+def get_mentions_bert_transformers_pipeline(text, ner_pipeline):
+    """This function just standarize the output of the bert tarnsformers
+    into our format. 
+
+    It assumes pipeline is created like
+    from transformers import pipeline
+    ner_pipeline = pipeline('ner', model=output_dir, tokenizer=output_dir,ignore_labels=['O'],
+    grouped_entities=True,ignore_subwords=True)
+    """
+    # the pipeline outputs something like this
+    # [{'entity_group': 'bio',
+    #   'score': 0.9999975,
+    #   'word': 'hiv infection',
+    #   'start': 22,
+    #   'end': 35},
+    #  {'entity_group': 'bio',
+    #     'score': 0.9999923,
+    #     'word': 'flu',
+    #     'start': 37,
+    #     'end': 40},
+
+    res_pipeline=ner_pipeline(text)
+    mentions = []
+    results = []
+    for res in res_pipeline:
+        
+        results.append({
+            'text': res['word'],
+            'start_pos': res['start'],
+            'end_pos': res['end'],
+        })
+        mentions.append(res['word'])
+
+    return mentions, results
+
 
 
 def get_mentions_flair(text,nlp):
