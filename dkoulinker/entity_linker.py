@@ -40,22 +40,18 @@ class EntityLinker:
     """
     def __init__(self, 
                 mention2pem:Dict, 
-                # entity2description, 
                 # mention_freq,
                 # collection_size_terms,
                 ranking_strategy: EntityRanking,
+                entity2description=None, 
                 ner_model=None,
                 ner_model_type='flair',
                 prune_overlapping_method='best_score'):
 
         self.mention2pem = mention2pem
-        # self.entity2description = entity2description
-        # self.entities_list = list(entity2description.keys())
-        # self.entities_list_np = np.asarray(self.entities_list)
-        # print(self.entities_list_np.shape)
-        # self.mention_freq = mention_freq
-        #TODO is necesary?
-        # self.collection_size_terms = collection_size_terms
+
+        
+        self.entity2description = entity2description
         self.ranking_strategy = ranking_strategy
         #TODO maybe strategy pattern is better here
         self.nlp = English()
@@ -82,7 +78,7 @@ class EntityLinker:
         {'text': 'reproduction',
         'end_pos': 68,
         'start_pos': 56,
-        'entities': [('GO:0000003', 5.114009083705022)],
+        'entities': [('GO:0000003', 5.114009083705022,'Description')],
         'best_entity': ('GO:0000003', 5.114009083705022)}]
 
         """
@@ -137,10 +133,40 @@ class EntityLinker:
 
         interpretations = self.ranking_strategy.get_interpretations(clean_text_tokens,mentions)
 
+        #Insert entity description before return     
         # log(interpretations)
         # return interpretations
-        return self.prune_overlapping_entities(interpretations,method= self.prune_overlapping_method)
+        if self.entity2description is None:
     
+            return self.prune_overlapping_entities(interpretations,method= self.prune_overlapping_method)
+        else:
+            return self._add_descriptions(self.prune_overlapping_entities(
+                interpretations, method=self.prune_overlapping_method))
+
+    def _add_descriptions(self,interpretations):
+        """Add the descriptions from entity2desc into the 'entities' field
+
+        :param interpretations: [description]
+        :type interpretations: [type]
+        """
+
+        entities = interpretations[0]['entities']
+        
+        # [['UBERON:0001007', 0.8700926733965282],
+        #  ['UBERON:0001555', 0.7340052681185107],
+        #     ['UBERON:0004907', 0.36037230161509565],
+        #     ['MA:0000917', 0.23101364089906892],
+        #     ['ZFA:0000112', 0.3708896865541044]],
+        new_entities= []
+        for id_,score in entities:
+            new_entities.append([id_,score,
+            ' '.join(self.entity2description[id_]) ])
+            #After: [['UBERON:0001007', 0.8700926733965282,'desc']
+        
+        interpretations[0]['entities'] = new_entities
+
+        return interpretations
+
     def get_mentions_by_tokens_and_dict(self, text:str)->Dict:
         #tokenize and check if mentions exist in the mention dictionary
         nlp = self.nlp

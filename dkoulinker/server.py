@@ -121,7 +121,8 @@ if __name__ == "__main__":
                    default=config.ONTO_MENTION_FREQ)
     p.add_argument("--tagger_file",
                    default=config.ONTO_TAGGER)
-
+    p.add_argument("--add_desc",
+                   dest='add_desc', action='store_true')
     p.add_argument("--bind", "-b", metavar="ADDRESS", default="0.0.0.0")
     p.add_argument("--port", "-p", default=5555, type=int)
     args = p.parse_args()
@@ -152,12 +153,16 @@ if __name__ == "__main__":
         mention_freq=mention2freq,
         mention2pem=mention2pem
     )
-    e_linker = EntityLinker(
-        ranking_strategy=queryranking_strategy,
-        ner_model=tagger,
-        mention2pem=mention2pem,
-        prune_overlapping_method='large_text'
-    )
+    e_linker_config = {
+        'ranking_strategy' : queryranking_strategy,
+        'ner_model' : tagger,
+        'mention2pem' : mention2pem,
+        'prune_overlapping_method' : 'large_text'
+    }
+    if args.add_desc:
+        e_linker_config['entity2description'] = entity2description
+
+    e_linker = EntityLinker(**e_linker_config)
     ################
 
     server_address = (args.bind, args.port)
