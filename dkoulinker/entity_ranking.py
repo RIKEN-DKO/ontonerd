@@ -62,6 +62,7 @@ class QueryEntityRanking(EntityRanking):
         self.mention_freq = mention_freq
         self.len_terms_collection = len(mention_freq)
 
+
     @abstractmethod
     def get_interpretations(self, text_tokens: List[str], mentions: List[Dict]) -> List[Dict]:
 
@@ -95,7 +96,8 @@ class QueryEntityRanking(EntityRanking):
         eps = self.min_score_for_be_ranked
         new_entities_scores_mentions = {}
         for mention in entities_scores_mentions:
-            # log(mention)
+            # print(mention)
+
 
             entity_and_score = mention['entities']
             # log(entity_and_score)
