@@ -46,7 +46,9 @@ class EntityLinker:
                 entity2description=None, 
                 ner_model=None,
                 ner_model_type='flair',
-                prune_overlapping_method='best_score'):
+                prune_overlapping_method='best_score',
+                use_ner_dict=True,
+                ):
 
         self.mention2pem = mention2pem
 
@@ -60,6 +62,7 @@ class EntityLinker:
         self.ner_model_type = ner_model_type
         
         self.ner_model = ner_model
+        self.use_ner_dict = use_ner_dict
         self.banned_mentions = ['s']
         # ncpu = cpu_count()
         # print('Creating multiprocessing pool of {} size '.format(ncpu))
@@ -119,11 +122,13 @@ class EntityLinker:
         #For each token find if some is a mention. Search the dictionary of mentions. 
         #TODO find text_tokens positions in text
         clean_text_tokens = get_clean_tokens(text,self.nlp)
-        tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
+        tokendict_mentions = []
+        if self.use_ner_dict:
+            tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
         # log('token mentions',tokendict_mentions)
         #combine the mentions found by the NER system and the ones found by
         #tokenization and dict searching.
-        print(tokendict_mentions) 
+        #1 Mention phase
         mentions = ner_mentions + tokendict_mentions
         #Also delete repetitions: https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
         mentions = [dict(s) for s in set(frozenset(d.items())

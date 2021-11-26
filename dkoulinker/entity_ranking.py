@@ -69,7 +69,7 @@ class QueryEntityRanking(EntityRanking):
 
         # entities_scores_mentions = {}
         for mention in mentions:
-
+            #Disambiguation
             scored_entities = self.score_E_q_m(text_tokens, mention['text'])
             # entities_scores_mentions[mention] = scored_entities
             mention['entities'] = scored_entities
@@ -122,6 +122,8 @@ class QueryEntityRanking(EntityRanking):
         # entities = self.entities_descriptions
         #We search in the relaed entities of the mention
         e_scores=[]
+        #TODO Candidate selection step
+        # Only compute score(e;q,m) for the related entities with highest p(e|m) p.165
         for entityid,pem in self.mention2pem[mention].items():
             # print(entity,desc)
             # Ids equal to zero are not useful
@@ -142,7 +144,9 @@ class QueryEntityRanking(EntityRanking):
         
         P_e_m = self.p_e_m(entityid, mention)
         P_q_e = self.p_q_e(text_tokens, entityid)
-
+        print('mention',mention)
+        print('P(e|m)',P_e_m)
+        print('P(q|e)',P_q_e)
         return P_e_m*P_q_e
 
     def p_e_m(self, entityid, mention: str, return_entity=False):
@@ -189,6 +193,8 @@ class QueryEntityRanking(EntityRanking):
             p_t_theta = (1-lamb_) * p_t_e + lamb_ * p_t_Eps
             if p_t_Eps == 0 or p_t_e == 0:
                 continue
+            print('p_t_theta', p_t_theta)
+            print('p_t_Eps', p_t_Eps)
             mul_up *= (pow(p_t_theta, c_term/lq))
             mul_down *= (pow(p_t_Eps, c_term/lq))
 
@@ -223,7 +229,7 @@ class QueryEntityRanking(EntityRanking):
 
         return count
 
-    def p_t_thetae(self, entityid, term, return_parts=False):
+    def  p_t_thetae(self, entityid, term, return_parts=False):
         """ P (t|θe)
         `entity_catalog`: A dict of entities and descriptions
 
@@ -246,6 +252,8 @@ class QueryEntityRanking(EntityRanking):
         #     sum_le += t_le
         #     sum_cte += t_cte
         if term in terms_freq:
+            print('terms_freq[term]', terms_freq[term])
+            print('self.len_terms_collection', self.len_terms_collection)
             p_t_Eps = terms_freq[term]/self.len_terms_collection
         else:
             p_t_Eps = 0
