@@ -133,8 +133,8 @@ class QueryEntityRanking(EntityRanking):
             if entityid == 0 or entityid == '0':
                 continue
             score = self.score_e_q_m(entityid, text_tokens, mention)
-            print('mention',mention)
-            print('score_e_q_m',score)
+            # print('mention',mention)
+            # print('score_e_q_m',score)
             e_scores.append((entityid,score))
 
 
