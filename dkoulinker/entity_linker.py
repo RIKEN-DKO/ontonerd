@@ -68,6 +68,15 @@ class EntityLinker:
         # print('Creating multiprocessing pool of {} size '.format(ncpu))
         # self.pool = Pool(int(ncpu/2))
 
+    def link_entities_par(self, docs, use_ner=True):
+        """The same that in link_entities but process several documents in parallel.
+
+        :param docs: [description]
+        :type docs: [type]
+        :param use_ner: [description], defaults to True
+        :type use_ner: bool, optional
+        """
+        pass
 
     def link_entities(self,text,use_ner=True):
         """
