@@ -9,6 +9,7 @@ import time
 import numpy as np
 from dkoulinker.entity_ranking import EntityRanking
 from dkoulinker.utils import (_print_colorful_text, is_overlaping, log)
+from dkoulinker.tokenization import SegtokSentenceSplitter
 import pprint
 
 class EntityLinker:
@@ -68,6 +69,9 @@ class EntityLinker:
         # print('Creating multiprocessing pool of {} size '.format(ncpu))
         # self.pool = Pool(int(ncpu/2))
 
+        if ner_model_type == 'flair':
+            self.sentence_splitter = SegtokSentenceSplitter()
+
     def link_entities_par(self, docs, use_ner=True):
         """The same that in link_entities but process several documents in parallel.
 
@@ -105,28 +109,34 @@ class EntityLinker:
         #The text is divided into sentences and NER object search for mentions in each one
         #Neither spacy or nltk are give the correct boundaries,  they remove trailing spaces.
         # split() for now 
-        last_sen_size = 0
-        for sent in text.split('.'):
-            if sent == '': #text ending with '.', give empty sentence 
-                continue
-            log('Analysing sentence:',sent)
-            ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(
-                sent,
-                self.ner_model,
-                model_type=self.ner_model_type)
 
-            if len(ner_mentions_sentence)>0:
-                for ment in ner_mentions_sentence:
+        if self.ner_model_type =='flair':
+            ner_mentions = self.get_ner_mentions_flair(text,
+                                                  tagger=self.ner_model,
+                                                       splitter=self.sentence_splitter)
+        else:
+            last_sen_size = 0
+            for sent in text.split('.'):
+                if sent == '': #text ending with '.', give empty sentence 
+                    continue
+                log('Analysing sentence:',sent)
+                ner_mentions_textonly_sentence,ner_mentions_sentence = get_mentions_ner(
+                    sent,
+                    self.ner_model,
+                    model_type=self.ner_model_type)
 
-                    ment['start_pos']+=last_sen_size
-                    ment['end_pos']+=last_sen_size
+                if len(ner_mentions_sentence)>0:
+                    for ment in ner_mentions_sentence:
 
-                #Skip mentions not in dictionary
-                    if ment['text'] in self.mention2pem:
-                        ner_mentions.append(ment)
-            #Last text lenght plus 1 for accounting the '.'
-            last_sen_size += len(sent) + 1 
-            # log('NER mentions:',ner_mentions)
+                        ment['start_pos']+=last_sen_size
+                        ment['end_pos']+=last_sen_size
+
+                    #Skip mentions not in dictionary
+                        if ment['text'] in self.mention2pem:
+                            ner_mentions.append(ment)
+                #Last text lenght plus 1 for accounting the '.'
+                last_sen_size += len(sent) + 1 
+                # log('NER mentions:',ner_mentions)
 
         #For each token find if some is a mention. Search the dictionary of mentions. 
         #TODO find text_tokens positions in text
@@ -158,6 +168,40 @@ class EntityLinker:
         else:
             return self._add_descriptions(self.prune_overlapping_entities(
                 interpretations, method=self.prune_overlapping_method))
+
+    def get_ner_mentions_flair(self,text,tagger,splitter):
+
+        
+        # use splitter to split text into list of sentences
+        plain_sentences, sentences = splitter.split(text)
+
+        # predict tags for sentences
+        # tagger = SequenceTagger.load('ner')
+        tagger.predict(sentences)
+        
+        ner_mentions = []  # a list of dicts
+        last_sen_size = 0
+        for i, sentence in enumerate(sentences):
+            # if len(sentence) == 0:
+            #     continue
+            # print(len(sentence))
+            # print(sentence.to_tagged_string())
+            ner_mentions_textonly_sentence, ner_mentions_sentence = proc_flair_sentence(
+                sentence)
+            if len(ner_mentions_sentence) > 0:
+                for ment in ner_mentions_sentence:
+
+                    ment['start_pos'] += last_sen_size
+                    ment['end_pos'] += last_sen_size
+
+                #Skip mentions not in dictionary
+                    if ment['text'] in self.mention2pem:
+                        ner_mentions.append(ment)
+        #Last text lenght plus 1 for accounting the '.'
+            last_sen_size += len(plain_sentences[i]) + 1
+        
+        return ner_mentions
+
 
     def _add_descriptions(self,interpretations):
         """Add the descriptions from entity2desc into the 'entities' field
@@ -336,6 +380,10 @@ def get_mentions_bert_transformers_pipeline(text, ner_pipeline):
 def get_mentions_flair(text,nlp):
     sentence = Sentence(text)
     nlp.predict(sentence) # how to sent batches?
+
+    return proc_flair_sentence
+
+def proc_flair_sentence(sentence):
 
     mentions = []
     start_poss=[]
