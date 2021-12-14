@@ -45,7 +45,7 @@ class EntityLinker:
                 ranking_strategy: EntityRanking,
                 entity2description=None, 
                 ner_model=None,
-                ner_model_type='flair',
+                 ner_model_type='flair',  # or bert_transformers_pipeline
                 prune_overlapping_method='best_score',
                 use_ner_dict=True,
                 ):
@@ -335,7 +335,7 @@ def get_mentions_bert_transformers_pipeline(text, ner_pipeline):
 
 def get_mentions_flair(text,nlp):
     sentence = Sentence(text)
-    nlp.predict(sentence)
+    nlp.predict(sentence) # how to sent batches?
 
     mentions = []
     start_poss=[]
