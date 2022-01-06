@@ -46,7 +46,9 @@ class EntityLinker:
                 entity2description=None, 
                 ner_model=None,
                 ner_model_type='flair',
-                prune_overlapping_method='best_score'):
+                prune_overlapping_method='best_score',
+                use_ner_dict=True,
+                ):
 
         self.mention2pem = mention2pem
 
@@ -60,6 +62,8 @@ class EntityLinker:
         self.ner_model_type = ner_model_type
         
         self.ner_model = ner_model
+        self.use_ner_dict = use_ner_dict
+        self.banned_mentions = ['s']
         # ncpu = cpu_count()
         # print('Creating multiprocessing pool of {} size '.format(ncpu))
         # self.pool = Pool(int(ncpu/2))
@@ -118,10 +122,13 @@ class EntityLinker:
         #For each token find if some is a mention. Search the dictionary of mentions. 
         #TODO find text_tokens positions in text
         clean_text_tokens = get_clean_tokens(text,self.nlp)
-        tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
+        tokendict_mentions = []
+        if self.use_ner_dict:
+            tokendict_mentions = self.get_mentions_by_tokens_and_dict(text)
         # log('token mentions',tokendict_mentions)
         #combine the mentions found by the NER system and the ones found by
-        #tokenization and dict searching. 
+        #tokenization and dict searching.
+        #1 Mention phase
         mentions = ner_mentions + tokendict_mentions
         #Also delete repetitions: https://stackoverflow.com/questions/11092511/python-list-of-unique-dictionaries
         mentions = [dict(s) for s in set(frozenset(d.items())
@@ -149,21 +156,21 @@ class EntityLinker:
         :param interpretations: [description]
         :type interpretations: [type]
         """
-
-        entities = interpretations[0]['entities']
-        
-        # [['UBERON:0001007', 0.8700926733965282],
-        #  ['UBERON:0001555', 0.7340052681185107],
-        #     ['UBERON:0004907', 0.36037230161509565],
-        #     ['MA:0000917', 0.23101364089906892],
-        #     ['ZFA:0000112', 0.3708896865541044]],
-        new_entities= []
-        for id_,score in entities:
-            new_entities.append([id_,score,
-            ' '.join(self.entity2description[id_]) ])
-            #After: [['UBERON:0001007', 0.8700926733965282,'desc']
-        
-        interpretations[0]['entities'] = new_entities
+        for ents in interpretations: 
+            entities = ents['entities']
+            
+            # [['UBERON:0001007', 0.8700926733965282],
+            #  ['UBERON:0001555', 0.7340052681185107],
+            #     ['UBERON:0004907', 0.36037230161509565],
+            #     ['MA:0000917', 0.23101364089906892],
+            #     ['ZFA:0000112', 0.3708896865541044]],
+            new_entities= []
+            for id_,score in entities:
+                new_entities.append([id_,score,
+                ' '.join(self.entity2description[id_]) ])
+                #After: [['UBERON:0001007', 0.8700926733965282,'desc']
+            
+            ents['entities'] = new_entities
 
         return interpretations
 
@@ -176,7 +183,9 @@ class EntityLinker:
         for token in doc:
             if ((not token.is_punct) 
             and (token.text not in all_stopwords)
-            and (token.text in self.mention2pem)):
+            and (token.text in self.mention2pem)
+            and not token.text in self.banned_mentions):
+
                 text_tokens.append({
                     'text': token.text,
                     'start_pos': token.idx,
